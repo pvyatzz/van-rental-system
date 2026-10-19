@@ -1,0 +1,60 @@
+package com.vanrental.backend.model;
+
+import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.time.LocalDate;
+
+@Entity
+@Table(name = "bookings", indexes = {
+        // speeds up the availability check, which always filters by vehicle + dates
+        @Index(name = "idx_bookings_vehicle_dates", columnList = "vehicle_id, start_date, end_date")
+})
+@Getter
+@Setter
+@NoArgsConstructor
+public class Booking {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    // Many bookings → one vehicle. Only Booking holds the link (unidirectional),
+    // so Vehicle stays simple and JSON never loops Vehicle → bookings → vehicle …
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "vehicle_id", nullable = false)
+    private Vehicle vehicle;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "customer_id", nullable = false)
+    private Customer customer;
+
+    // Both dates are inclusive: start 20 Oct, end 22 Oct = 3 rental days
+    @Column(name = "start_date", nullable = false)
+    private LocalDate startDate;
+
+    @Column(name = "end_date", nullable = false)
+    private LocalDate endDate;
+
+    private String purpose;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private BookingStatus status;
+
+    // Snapshot of rate × days at booking time, so later rate changes don't alter old bookings
+    @Column(name = "total_price", nullable = false, precision = 10, scale = 2)
+    private BigDecimal totalPrice;
+
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private Instant createdAt;
+
+    @PrePersist
+    void onCreate() {
+        createdAt = Instant.now();
+    }
+}

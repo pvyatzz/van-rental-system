@@ -42,10 +42,13 @@ public class VehicleService {
         return vehicleRepository.save(existing);
     }
 
+    @Transactional
     public void delete(Long id) {
         if (!vehicleRepository.existsById(id)) {
             throw new ResourceNotFoundException("Vehicle", id);
         }
+        // flush sends the DELETE now, so a foreign-key error (vehicle has bookings) surfaces here → 409
         vehicleRepository.deleteById(id);
+        vehicleRepository.flush();
     }
 }

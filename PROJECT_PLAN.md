@@ -58,13 +58,14 @@ npx -p @angular/cli@19 ng new . --routing --style=scss --skip-tests
 - [x] Handle CORS on the backend (Spring Boot needs to allow requests from `http://localhost:4200`)
 - [x] **Commit:** `feat: Angular frontend displaying vehicle list from backend API`
 
-## Phase 3 — Customer & Booking Entities
-- [ ] `Customer` entity (name, contact number, email)
-- [ ] `Booking` entity (vehicle, customer, start date, end date, purpose, status)
-- [ ] Relationships: one `Vehicle` → many `Booking`; one `Customer` → many `Booking`
-- [ ] `BookingRepository` + `BookingController` (CRUD)
-- [ ] **Availability check logic** — core business rule: no overlapping bookings for the same vehicle on the same date range
-- [ ] **Commit:** `feat: add Customer and Booking entities with availability validation`
+## Phase 3 — Customer & Booking Entities (done)
+- [x] `Customer` entity (name, contact number, email — email optional)
+- [x] `Booking` entity (vehicle, customer, start date, end date, purpose, status, total price snapshot)
+- [x] Relationships: one `Vehicle` → many `Booking`; one `Customer` → many `Booking` (unidirectional `@ManyToOne`)
+- [x] `BookingRepository` + `BookingController` (CRUD + `PATCH /{id}/status` + `GET /availability`), `CustomerController` (CRUD)
+- [x] **Availability check logic** — no overlapping non-cancelled bookings for the same vehicle (inclusive dates), vehicle row lock against simultaneous double-booking
+- [x] Unit tests for booking rules (`BookingServiceTest`)
+- [x] **Commit:** `feat: add Customer and Booking entities with availability validation`
 
 ## Phase 4 — Booking Flow (Frontend)
 - [ ] `BookingService` (Angular)
@@ -89,5 +90,7 @@ npx -p @angular/cli@19 ng new . --routing --style=scss --skip-tests
 
 ## Working Agreement
 - Explain each step as it's built — the goal is to actually learn Spring Boot and Angular, not just get a working app from copy-pasted code.
+- Every feature gets an entry in `LEARNING_NOTES.md` (what / why / concept), committed together with the code.
+- Van photos live in `van-img/`; copies served by the frontend are in `frontend/public/images/`.
 - One commit per completed, working feature.
 - The project owner may return to a separate planning conversation (Claude.ai chat) to discuss schema decisions or debug concepts before handing more work back here — treat that as normal, not a sign something is wrong.
