@@ -16,8 +16,8 @@ import { problemMessage } from '../../shared/problem';
 export class BookingConfirmationComponent implements OnInit {
   private readonly bookingService = inject(BookingService);
 
-  /** The :id from the route /bookings/:id (bound by withComponentInputBinding) */
-  readonly id = input.required<string>();
+  /** The :reference from the route /bookings/:reference (bound by withComponentInputBinding) */
+  readonly reference = input.required<string>();
 
   readonly booking = signal<Booking | null>(null);
   readonly error = signal<string | null>(null);
@@ -28,7 +28,7 @@ export class BookingConfirmationComponent implements OnInit {
   });
 
   ngOnInit(): void {
-    this.bookingService.getById(Number(this.id())).subscribe({
+    this.bookingService.getByReference(this.reference()).subscribe({
       next: booking => this.booking.set(booking),
       error: err => this.error.set(problemMessage(err))
     });

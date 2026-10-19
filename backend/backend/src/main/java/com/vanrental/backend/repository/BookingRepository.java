@@ -40,4 +40,9 @@ public interface BookingRepository extends JpaRepository<Booking, Long>, JpaSpec
 
     @EntityGraph(attributePaths = {"vehicle", "customer"})
     Optional<Booking> findWithDetailsById(Long id);
+
+    @EntityGraph(attributePaths = {"vehicle", "customer"})
+    Optional<Booking> findWithDetailsByReference(String reference);
+
+    List<Booking> findByReferenceIsNull();
 }

@@ -3,6 +3,7 @@ package com.vanrental.backend.exception;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -34,6 +35,13 @@ public class GlobalExceptionHandler {
     public ProblemDetail handleDataIntegrity(DataIntegrityViolationException ex) {
         return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT,
                 "This record is still referenced by other data (for example, existing bookings)");
+    }
+
+    // Wrong username or password on POST /api/auth/login. Same message for both, so attackers
+    // can't find out which usernames exist.
+    @ExceptionHandler(AuthenticationException.class)
+    public ProblemDetail handleAuthentication(AuthenticationException ex) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.UNAUTHORIZED, "Invalid username or password");
     }
 
     // e.g. ?status=FOO or ?vehicleId=abc — a query/path value that can't be converted to its type

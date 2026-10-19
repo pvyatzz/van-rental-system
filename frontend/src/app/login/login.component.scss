@@ -1,0 +1,49 @@
+.page {
+  max-width: 380px;
+  margin: 0 auto;
+  padding: 48px 16px;
+}
+
+form {
+  background: #fff;
+  border: 1px solid #e3e3e3;
+  border-radius: 10px;
+  padding: 24px;
+}
+
+h1 {
+  font-size: 1.4rem;
+  margin: 0 0 16px;
+}
+
+label {
+  display: block;
+  font-size: 0.9rem;
+  margin: 12px 0 4px;
+}
+
+input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 9px 10px;
+  border: 1px solid #c9ccd1;
+  border-radius: 6px;
+  font: inherit;
+
+  &.ng-invalid.ng-touched {
+    border-color: #b3261e;
+  }
+}
+
+.error {
+  background: #fde8e7;
+  color: #b3261e;
+  padding: 10px 12px;
+  border-radius: 6px;
+  margin: 14px 0 0;
+}
+
+button {
+  width: 100%;
+  margin-top: 18px;
+}

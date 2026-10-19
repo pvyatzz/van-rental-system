@@ -10,6 +10,7 @@ import java.time.LocalDate;
 /** What the API returns for a booking: flat and safe to serialize (no lazy JPA proxies). */
 public record BookingResponse(
         Long id,
+        String reference,
         Long vehicleId,
         String vehicleModel,
         Long customerId,
@@ -25,6 +26,7 @@ public record BookingResponse(
     public static BookingResponse from(Booking booking) {
         return new BookingResponse(
                 booking.getId(),
+                booking.getReference(),
                 booking.getVehicle().getId(),
                 booking.getVehicle().getModel(),
                 booking.getCustomer().getId(),

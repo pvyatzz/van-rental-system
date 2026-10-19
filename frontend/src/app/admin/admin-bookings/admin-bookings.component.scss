@@ -97,6 +97,14 @@ tbody tr:last-child td {
   white-space: nowrap;
 }
 
+.ref {
+  display: block;
+  color: #777;
+  font-size: 0.75rem;
+  font-family: ui-monospace, Consolas, monospace;
+  white-space: nowrap;
+}
+
 .phone {
   display: block;
   color: #555;

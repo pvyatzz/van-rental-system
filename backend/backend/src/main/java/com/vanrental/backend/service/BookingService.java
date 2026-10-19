@@ -72,6 +72,14 @@ public class BookingService {
         return BookingResponse.from(getBooking(id));
     }
 
+    /** Public lookup for the customer confirmation page. Matches the code case-insensitively. */
+    @Transactional(readOnly = true)
+    public BookingResponse findByReference(String reference) {
+        return bookingRepository.findWithDetailsByReference(reference.trim().toUpperCase())
+                .map(BookingResponse::from)
+                .orElseThrow(() -> new ResourceNotFoundException("Booking with reference " + reference + " not found"));
+    }
+
     @Transactional
     public BookingResponse create(BookingRequest request) {
         validateDates(request.startDate(), request.endDate());

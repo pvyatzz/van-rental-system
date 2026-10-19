@@ -147,7 +147,7 @@ export class BookingFormComponent implements OnInit {
         purpose: value.purpose.trim() || null
       }))
     ).subscribe({
-      next: booking => this.router.navigate(['/bookings', booking.id]),
+      next: booking => this.router.navigate(['/bookings', booking.reference]),
       error: err => {
         this.submitting.set(false);
         this.submitError.set(problemMessage(err));

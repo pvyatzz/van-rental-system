@@ -13,6 +13,8 @@ export interface BookingRequest {
 /** What we get back: BookingResponse */
 export interface Booking {
   id: number;
+  /** Public code shown to the customer, e.g. "VR-7K3P9QXA" */
+  reference: string;
   vehicleId: number;
   vehicleModel: string;
   customerId: number;

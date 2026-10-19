@@ -6,11 +6,13 @@
         Thank you, {{ b.customerName }}! Your booking is <strong>pending</strong>. We'll contact you at
         <strong>{{ b.customerContactNumber }}</strong> to confirm it.
       </p>
+      <p class="keep">Keep your reference <strong>{{ b.reference }}</strong>. You can reopen this page anytime with
+        this link.</p>
     </div>
 
     <dl class="summary">
-      <dt>Booking no.</dt>
-      <dd>#{{ b.id }}</dd>
+      <dt>Reference</dt>
+      <dd><strong class="reference">{{ b.reference }}</strong></dd>
 
       <dt>Status</dt>
       <dd><span class="badge" [attr.data-status]="b.status">{{ b.status }}</span></dd>

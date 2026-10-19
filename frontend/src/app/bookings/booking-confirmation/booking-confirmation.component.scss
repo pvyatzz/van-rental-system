@@ -19,6 +19,16 @@
   p {
     margin: 0;
   }
+
+  .keep {
+    margin-top: 8px;
+    font-size: 0.9rem;
+  }
+}
+
+.reference {
+  font-family: ui-monospace, Consolas, monospace;
+  letter-spacing: 0.05em;
 }
 
 .summary {

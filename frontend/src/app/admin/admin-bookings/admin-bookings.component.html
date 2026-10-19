@@ -63,7 +63,7 @@
       <tbody>
         @for (b of bookings(); track b.id) {
           <tr>
-            <td>{{ b.id }}</td>
+            <td>{{ b.id }}<span class="ref">{{ b.reference }}</span></td>
             <td>{{ b.vehicleModel }} #{{ b.vehicleId }}</td>
             <td>
               {{ b.customerName }}

@@ -23,6 +23,10 @@ public class Booking {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    // Public code shown to the customer (the id stays internal). See BookingReference.
+    @Column(unique = true, length = 20)
+    private String reference;
+
     // Many bookings → one vehicle. Only Booking holds the link (unidirectional),
     // so Vehicle stays simple and JSON never loops Vehicle → bookings → vehicle …
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
@@ -56,5 +60,8 @@ public class Booking {
     @PrePersist
     void onCreate() {
         createdAt = Instant.now();
+        if (reference == null) {
+            reference = BookingReference.generate();
+        }
     }
 }

@@ -41,6 +41,12 @@ public class BookingController {
         return bookingService.findById(id);
     }
 
+    /** Public: the customer's confirmation page, e.g. GET /api/bookings/ref/VR-7K3P9QXA */
+    @GetMapping("/ref/{reference}")
+    public BookingResponse getByReference(@PathVariable String reference) {
+        return bookingService.findByReference(reference);
+    }
+
     /** e.g. GET /api/bookings/availability?vehicleId=1&startDate=2026-11-01&endDate=2026-11-03 */
     @GetMapping("/availability")
     public AvailabilityResponse checkAvailability(

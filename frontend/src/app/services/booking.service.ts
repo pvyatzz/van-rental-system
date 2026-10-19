@@ -25,6 +25,11 @@ export class BookingService {
     return this.http.get<Booking>(`${this.baseUrl}/${id}`);
   }
 
+  /** Public lookup used by the customer's confirmation page */
+  getByReference(reference: string): Observable<Booking> {
+    return this.http.get<Booking>(`${this.baseUrl}/ref/${encodeURIComponent(reference)}`);
+  }
+
   create(request: BookingRequest): Observable<Booking> {
     return this.http.post<Booking>(this.baseUrl, request);
   }

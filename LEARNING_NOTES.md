@@ -430,3 +430,69 @@ filters.valueChanges.pipe(startWith(null), map(...), tap(showLoading), debounceT
 - Setting a van to *Under maintenance* doesn't touch its **existing** bookings. Filter the Bookings tab by that van to see who needs a call.
 - No "add van" or "delete van" buttons (the API supports both). Add them if the fleet changes.
 - No pagination. Fine for a 3-van business, but at hundreds of bookings, add `Pageable` to the search.
+
+---
+
+## Phase 6.1: Admin login (Spring Security + JWT) and booking references
+
+### How login works
+```
+1. POST /api/auth/login {username, password}
+2.   → AuthenticationManager checks the password (BCrypt)
+3.   ← {token, username, expiresAt}               (a signed JWT, valid 8 hours)
+4. Every admin request: Authorization: Bearer <token>
+5.   → Spring Security checks the signature + expiry, then the role → allowed, or 401/403
+```
+- **JWT (JSON Web Token)** = `header.payload.signature`, each part base64. The payload (`sub: admin`, `roles: ["ADMIN"]`, `exp: ...`) is **readable by anyone**: paste a token into jwt.io and see. Never put secrets in it.
+- The **signature** is an HMAC-SHA256 of header + payload made with the server's secret key (`JWT_SECRET`). Change one character and the signature no longer matches, so you get a 401. `SecurityTest` checks exactly that.
+- **Stateless:** the server stores no sessions. The token itself proves who you are. The downside is that a token can't be "taken back" before it expires; logging out only deletes it in the browser. That's why tokens are short-lived (8 h).
+
+### `config/SecurityConfig.java`
+- `SecurityFilterChain` is the list of rules, checked **top to bottom; the first match wins**:
+  - **Public:** `GET /api/vehicles/**`, `GET /api/bookings/availability`, `GET /api/bookings/ref/*`, `POST /api/customers`, `POST /api/bookings`, `POST /api/auth/login`
+  - **Everything else:** `.anyRequest().hasRole("ADMIN")`. A "deny by default" list is safer than listing what to protect: a new endpoint is protected automatically.
+- `csrf.disable()`: CSRF attacks trick the browser into sending its **cookies** to your site. We don't use cookies for login (the token goes in a header the attacker's page can't add), so CSRF protection isn't needed. With cookie sessions it **must** stay on.
+- `SessionCreationPolicy.STATELESS`: don't create HTTP sessions.
+- `oauth2ResourceServer().jwt()` is Spring's built-in "read and verify the Bearer token" filter. `JwtGrantedAuthoritiesConverter` maps our `roles` claim to `ROLE_ADMIN`, which `hasRole("ADMIN")` checks.
+- **CORS moved here** (`corsConfigurationSource` bean) and `WebConfig` was deleted. Spring Security runs *before* Spring MVC, so the preflight `OPTIONS` request must be allowed at the security level, and `Authorization` must be an allowed header.
+- **Admin account:** one user, from settings (`ADMIN_USERNAME` / `ADMIN_PASSWORD`). The password is hashed with **BCrypt** at startup: slow on purpose and salted, so even a stolen hash is hard to crack.
+
+### `application.properties`: settings from environment variables
+```properties
+app.admin.password=${ADMIN_PASSWORD:admin123}
+```
+`${NAME:default}` reads the environment variable `NAME`, or uses the default. **The defaults are for your computer only.** Before going online, set real values for `ADMIN_PASSWORD` and `JWT_SECRET` (32+ random characters). Anyone who knows the secret can create their own admin tokens. In PowerShell:
+```powershell
+$env:ADMIN_PASSWORD = "a-long-password"; $env:JWT_SECRET = "at-least-32-random-characters......"; .\mvnw.cmd spring-boot:run
+```
+
+### `security/TokenService.java`, `controller/AuthController.java`
+- `authenticationManager.authenticate(...)` either returns the logged-in `Authentication` or throws `BadCredentialsException`. `GlobalExceptionHandler` turns that into **401 "Invalid username or password"**: the same message for a wrong username or a wrong password, so attackers can't discover valid usernames.
+- `JwsHeader.with(MacAlgorithm.HS256)` must be set explicitly. The encoder otherwise assumes RS256 (public/private key pairs).
+
+### Booking references (`model/BookingReference.java`)
+- The Phase 4 privacy problem: `/bookings/5` showed booking 5's name and phone to anyone who guessed the number.
+- Now every booking gets a random code like **`VR-7K3P9QXA`** (`@PrePersist`). The customer page is `/bookings/VR-7K3P9QXA`, backed by the public `GET /api/bookings/ref/{reference}`. The plain-id endpoints are admin-only.
+- `SecureRandom`, not `Random`: `Random` is predictable if someone sees a few outputs; `SecureRandom` isn't.
+- The alphabet leaves out `0/O` and `1/I/L`, so codes are easy to read over the phone. 31⁸ ≈ 850 billion combinations, so guessing isn't practical.
+- **Existing rows:** `ddl-auto=update` adds the new column, but old bookings would have it empty. `DataSeeder.backfillBookingReferences()` fills them in at startup. A migration tool (Flyway) would do this as a versioned script.
+
+### Frontend: `auth/`
+- **`auth.service.ts`** keeps the session in a signal **and** `localStorage`, so a refresh doesn't log you out. Trade-off: JavaScript on the page can read `localStorage`, which is why we never insert untrusted HTML (Angular escapes `{{ }}` text automatically). `token()` also logs out when `expiresAt` has passed.
+- **`auth.interceptor.ts`** (`HttpInterceptorFn`) wraps **every** HttpClient request:
+  - adds `Authorization: Bearer ...`, but only for our own API URL, never sending the token to other sites;
+  - on a **401** from the API (expired or forged token), logs out and goes to `/login?returnUrl=...`;
+  - requests are immutable, so `req.clone({ setHeaders })` creates a modified copy;
+  - registered with `provideHttpClient(withInterceptors([authInterceptor]))`.
+- **`admin.guard.ts`** (`CanActivateFn`) runs before `/admin` opens. Not logged in → `createUrlTree(['/login'], { queryParams: { returnUrl } })`. **The guard only hides pages; the backend is the real lock.** Anyone can bypass frontend code, but nobody can bypass the server's 401.
+- **`login/`** returns to `returnUrl` after logging in, but only if it starts with `/` (an "open redirect" check, so `?returnUrl=https://evil.example` can't send people to another site).
+- Header: **Admin** and **Log out** only appear when logged in. Customers see a small "Admin login" link in the footer.
+
+### How it was tested
+- **`SecurityTest` (MockMvc, 4 tests):** public endpoints open; admin endpoints 401; wrong password 401; a real token works; a token with a changed signature is refused. In Boot 4, `@AutoConfigureMockMvc` lives in `org.springframework.boot.webmvc.test.autoconfigure`.
+- **Browser (16 checks):** redirect to login with returnUrl, wrong password, return after login, reference URL after booking, confirm with token, session survives reload, `/bookings/1` shows nothing, forged token → logged out, Log out.
+
+### Known limitations
+- One admin account, set via environment variables. For staff with their own logins, store users in a database table (`UserDetailsService` backed by JPA).
+- No limit on login attempts. Add rate limiting (or lock after N failures) before going public.
+- Logging out doesn't invalidate an already-copied token until it expires (8 h).

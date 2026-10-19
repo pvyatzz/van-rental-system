@@ -3,10 +3,19 @@
   <nav>
     <a routerLink="/vehicles" routerLinkActive="active">Vans</a>
     <a routerLink="/book" routerLinkActive="active">Book a van</a>
-    <a routerLink="/admin" routerLinkActive="active">Admin</a>
+    @if (auth.loggedIn()) {
+      <a routerLink="/admin" routerLinkActive="active">Admin</a>
+      <button type="button" class="logout" (click)="logout()">Log out ({{ auth.username() }})</button>
+    }
   </nav>
 </header>
 
 <main>
   <router-outlet />
 </main>
+
+<footer class="footer">
+  @if (!auth.loggedIn()) {
+    <a routerLink="/login">Admin login</a>
+  }
+</footer>
