@@ -15,6 +15,7 @@ import com.vanrental.backend.model.PaymentStatus;
 import com.vanrental.backend.model.Vehicle;
 import com.vanrental.backend.model.VehicleStatus;
 import com.vanrental.backend.notification.BookingConfirmedEvent;
+import com.vanrental.backend.notification.BookingCreatedEvent;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import com.vanrental.backend.repository.BookingRepository;
@@ -79,6 +80,7 @@ public class BookingService {
         Booking booking = createBooking(request.withCustomer(customer.getId()));
         booking.setDownPayment(downPayment.min(booking.getTotalPrice())); // never more than the whole price
         paymentService.attachProof(booking, proof);
+        eventPublisher.publishEvent(new BookingCreatedEvent(booking.getId())); // "request received" email
         return BookingResponse.from(booking);
     }
 

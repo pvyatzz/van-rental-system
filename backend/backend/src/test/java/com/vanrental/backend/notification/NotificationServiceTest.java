@@ -3,6 +3,7 @@ package com.vanrental.backend.notification;
 import com.vanrental.backend.model.Booking;
 import com.vanrental.backend.model.BookingStatus;
 import com.vanrental.backend.model.Customer;
+import com.vanrental.backend.model.PaymentStatus;
 import com.vanrental.backend.model.Vehicle;
 import com.vanrental.backend.model.VehicleStatus;
 import com.vanrental.backend.repository.BookingRepository;
@@ -44,15 +45,19 @@ class NotificationServiceTest {
         booking.setEndDate(LocalDate.of(2026, 11, 22));
         booking.setStatus(BookingStatus.CONFIRMED);
         booking.setTotalPrice(new BigDecimal("10500.00"));
+        booking.setDownPayment(new BigDecimal("500.00"));
+        booking.setPaymentStatus(PaymentStatus.VERIFIED);
     }
 
     private NotificationService service(Optional<JavaMailSender> sender) {
-        return new NotificationService(bookingRepository, sender, "bookings@vanrental.test", "Van Rental");
+        return new NotificationService(bookingRepository, sender, "bookings@vanrental.test", "Van Rental",
+                "https://vans.example");
     }
 
     @Test
     void sendsConfirmationWithTheBookingDetails() {
-        service(Optional.of(mailSender)).sendConfirmation(booking);
+        NotificationService service = service(Optional.of(mailSender));
+        service.send(booking, service.buildConfirmation(booking));
 
         ArgumentCaptor<SimpleMailMessage> sent = ArgumentCaptor.forClass(SimpleMailMessage.class);
         verify(mailSender).send(sent.capture());
@@ -62,10 +67,40 @@ class NotificationServiceTest {
         assertThat(message.getSubject()).isEqualTo("Booking confirmed: VR-ABCD2345");
         assertThat(message.getText())
                 .contains("Hi Maria Santos")
-                .contains("VR-ABCD2345")
+                .contains("your booking is confirmed")
                 .contains("Fri, 20 Nov 2026")
                 .contains("Sun, 22 Nov 2026 (3 days)")
-                .contains("PHP 10,500.00");
+                .contains("PHP 10,500.00")
+                .contains("Down payment: PHP 500.00 (received)")
+                .contains("Balance at pickup: PHP 10,000.00");
+    }
+
+    @Test
+    void requestReceivedEmailSaysThePaymentIsBeingChecked() {
+        booking.setStatus(BookingStatus.PENDING);
+        booking.setPaymentStatus(PaymentStatus.SUBMITTED);
+
+        SimpleMailMessage message = service(Optional.of(mailSender)).buildReceived(booking);
+
+        assertThat(message.getSubject()).isEqualTo("Booking request received: VR-ABCD2345");
+        assertThat(message.getText())
+                .contains("We received your booking request")
+                .contains("Down payment: PHP 500.00 (being checked)")
+                .contains("https://vans.example/bookings/VR-ABCD2345");
+    }
+
+    @Test
+    void paymentRejectedEmailLinksToTheUploadPage() {
+        booking.setStatus(BookingStatus.PENDING);
+        booking.setPaymentStatus(PaymentStatus.REJECTED);
+
+        SimpleMailMessage message = service(Optional.of(mailSender)).buildPaymentRejected(booking);
+
+        assertThat(message.getSubject()).isEqualTo("Please check your down payment: VR-ABCD2345");
+        assertThat(message.getText())
+                .contains("couldn't confirm your down payment of PHP 500.00")
+                .contains("upload a new screenshot here")
+                .contains("https://vans.example/bookings/VR-ABCD2345");
     }
 
     @Test
@@ -83,19 +118,21 @@ class NotificationServiceTest {
     @Test
     void customerWithoutEmailGetsNothing() {
         booking.getCustomer().setEmail(null);
-        service(Optional.of(mailSender)).sendConfirmation(booking);
+        NotificationService service = service(Optional.of(mailSender));
+        service.send(booking, service.buildConfirmation(booking));
         verify(mailSender, never()).send(any(SimpleMailMessage.class));
     }
 
     @Test
     void withoutMailServerItOnlyLogs() {
-        // No JavaMailSender bean (mail not configured): must not throw
-        assertThatCode(() -> service(Optional.empty()).sendConfirmation(booking)).doesNotThrowAnyException();
+        NotificationService service = service(Optional.empty());
+        assertThatCode(() -> service.send(booking, service.buildConfirmation(booking))).doesNotThrowAnyException();
     }
 
     @Test
     void aFailingMailServerDoesNotThrow() {
         doThrow(new MailSendException("SMTP down")).when(mailSender).send(any(SimpleMailMessage.class));
-        assertThatCode(() -> service(Optional.of(mailSender)).sendConfirmation(booking)).doesNotThrowAnyException();
+        NotificationService service = service(Optional.of(mailSender));
+        assertThatCode(() -> service.send(booking, service.buildConfirmation(booking))).doesNotThrowAnyException();
     }
 }

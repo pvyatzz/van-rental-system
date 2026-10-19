@@ -746,10 +746,33 @@ SUBMITTED (customer uploaded) ──► VERIFIED (admin) ──► booking can b
 
 ---
 
+## Phase 7.3: Booking emails (received, confirmed, payment rejected)
+
+| When | Email subject | Says |
+|---|---|---|
+| Customer books | **Booking request received: VR-…** | details, "Down payment PHP 500.00 (being checked)", link to the booking page |
+| Admin rejects the proof | **Please check your down payment: VR-…** | "upload a new screenshot here" + link, "your dates stay reserved" |
+| Admin confirms | **Booking confirmed: VR-…** | details, "Down payment PHP 500.00 (received)", balance at pickup |
+
+- Same pattern as 6.2: services **publish events** (`BookingCreatedEvent`, `PaymentRejectedEvent`, `BookingConfirmedEvent`), and `NotificationService` listens with `@TransactionalEventListener(AFTER_COMMIT)` + `@Async`. Adding the two new emails didn't touch any booking logic beyond one `publishEvent` line each. That's the payoff of events.
+- The three emails share their pieces (`greeting`, `details`, `signature`), so the booking details always look the same.
+- The link in emails uses `app.frontend-url` (`FRONTEND_URL`), because the backend doesn't know where the website runs. Set it to the real address when deploying.
+- Customers always have an email now (Google sign-in), so these emails reach everyone. Until a real mail server is configured (see 6.2 for Gmail), they're written to the backend log.
+
+### Testing gotcha: `publishEvent(any())` was checking the wrong method
+`ApplicationEventPublisher.publishEvent` is **overloaded**: `publishEvent(ApplicationEvent)` and `publishEvent(Object)`. With `any()` (no type), Java picks the *more specific* one, `ApplicationEvent`. Our events are plain records, so they go to the `Object` version. As a result, `verify(publisher, never()).publishEvent(any())` was checking a method we never call, and **always passed**: a test that can't fail. It's fixed with `any(Object.class)`, which points at the right overload. The lesson: when a "never happens" test passes, ask whether it *could* fail.
+
+### How it was tested
+- `NotificationServiceTest` (7): content of all three emails (amounts, "being checked"/"received", upload link), pickup + map link, no address → nothing sent, no mail server → log only, mail server down → no crash.
+- `BookingServiceTest`: booking publishes `BookingCreatedEvent`. `PaymentServiceTest`: rejecting publishes `PaymentRejectedEvent`, verifying publishes nothing.
+- **Live** with a fake SMTP server: book → reject → re-upload → verify → confirm via the real API delivered **exactly three** emails, in order, each sent on a background thread (`task-1`…`task-3`).
+
+---
+
 ## Before going online (deployment checklist)
 Everything so far runs on your computer. Before deploying (Render, Railway, a VPS):
 1. **Secrets out of the code:** the database password, `ADMIN_PASSWORD` and `JWT_SECRET` become environment variables on the server. Never use the `admin123` / dev secret defaults online.
 2. **`ddl-auto=update` → Flyway migrations**, so database changes are versioned scripts, not guesses at startup.
 3. **HTTPS** (most hosts do this for you). Required for login tokens and for "Use my location".
-4. `CORS_ALLOWED_ORIGINS` set to your real frontend address; `environment.ts` `apiUrl` pointing to the real backend (a separate `environment.prod.ts`).
+4. `CORS_ALLOWED_ORIGINS` and `FRONTEND_URL` set to your real frontend address; `environment.ts` `apiUrl` pointing to the real backend (a separate `environment.prod.ts`); your real https address added to the Google OAuth client's "Authorized JavaScript origins".
 5. Rate-limit `/api/auth/login`; set up real SMTP (6.2); consider a paid map-tile provider if traffic grows.

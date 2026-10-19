@@ -13,6 +13,7 @@ import com.vanrental.backend.model.PaymentStatus;
 import com.vanrental.backend.model.Vehicle;
 import com.vanrental.backend.model.VehicleStatus;
 import com.vanrental.backend.notification.BookingConfirmedEvent;
+import com.vanrental.backend.notification.BookingCreatedEvent;
 import com.vanrental.backend.repository.BookingRepository;
 import com.vanrental.backend.repository.CustomerRepository;
 import com.vanrental.backend.repository.VehicleRepository;
@@ -171,6 +172,7 @@ class BookingServiceTest {
         assertThat(result.downPayment()).isEqualByComparingTo("500");
         assertThat(result.balanceDue()).isEqualByComparingTo("10000"); // 10,500 − 500
         verify(paymentService).attachProof(any(Booking.class), org.mockito.ArgumentMatchers.eq(image));
+        verify(eventPublisher).publishEvent(any(BookingCreatedEvent.class)); // "request received" email
     }
 
     @Test
@@ -202,7 +204,7 @@ class BookingServiceTest {
         assertThatThrownBy(() -> bookingService.changeStatus(5L, BookingStatus.CONFIRMED))
                 .isInstanceOf(InvalidRequestException.class)
                 .hasMessageContaining("Verify the down payment");
-        verify(eventPublisher, never()).publishEvent(any());
+        verify(eventPublisher, never()).publishEvent(any(Object.class));
     }
 
     @Test
@@ -254,7 +256,7 @@ class BookingServiceTest {
 
         bookingService.changeStatus(5L, BookingStatus.CANCELLED);
 
-        verify(eventPublisher, never()).publishEvent(any());
+        verify(eventPublisher, never()).publishEvent(any(Object.class));
     }
 
     private Booking booking(Long id, LocalDate from, LocalDate to, BookingStatus status) {

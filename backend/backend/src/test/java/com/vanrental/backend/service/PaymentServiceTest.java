@@ -9,11 +9,13 @@ import com.vanrental.backend.model.PaymentProof;
 import com.vanrental.backend.model.PaymentStatus;
 import com.vanrental.backend.model.Vehicle;
 import com.vanrental.backend.model.VehicleStatus;
+import com.vanrental.backend.notification.PaymentRejectedEvent;
 import com.vanrental.backend.repository.BookingRepository;
 import com.vanrental.backend.repository.PaymentProofRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.mock.web.MockMultipartFile;
 
 import java.math.BigDecimal;
@@ -36,7 +38,8 @@ class PaymentServiceTest {
 
     PaymentProofRepository proofRepository = mock(PaymentProofRepository.class);
     BookingRepository bookingRepository = mock(BookingRepository.class);
-    PaymentService paymentService = new PaymentService(proofRepository, bookingRepository);
+    ApplicationEventPublisher eventPublisher = mock(ApplicationEventPublisher.class);
+    PaymentService paymentService = new PaymentService(proofRepository, bookingRepository, eventPublisher);
 
     Booking booking;
 
@@ -109,6 +112,17 @@ class PaymentServiceTest {
     void adminCanVerifyOrRejectASubmittedPayment() {
         when(bookingRepository.findWithDetailsById(5L)).thenReturn(Optional.of(booking));
         assertThat(paymentService.review(5L, PaymentStatus.VERIFIED).paymentStatus()).isEqualTo(PaymentStatus.VERIFIED);
+    }
+
+    @Test
+    void rejectingAsksTheCustomerByEmailButVerifyingDoesNot() {
+        when(bookingRepository.findWithDetailsById(5L)).thenReturn(Optional.of(booking));
+        paymentService.review(5L, PaymentStatus.REJECTED);
+        verify(eventPublisher).publishEvent(new PaymentRejectedEvent(5L));
+
+        booking.setPaymentStatus(PaymentStatus.SUBMITTED);
+        paymentService.review(5L, PaymentStatus.VERIFIED);
+        verify(eventPublisher, org.mockito.Mockito.times(1)).publishEvent(any(Object.class));
     }
 
     @Test

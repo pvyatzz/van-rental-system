@@ -7,8 +7,10 @@ import com.vanrental.backend.model.Booking;
 import com.vanrental.backend.model.BookingStatus;
 import com.vanrental.backend.model.PaymentProof;
 import com.vanrental.backend.model.PaymentStatus;
+import com.vanrental.backend.notification.PaymentRejectedEvent;
 import com.vanrental.backend.repository.BookingRepository;
 import com.vanrental.backend.repository.PaymentProofRepository;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -27,10 +29,13 @@ public class PaymentService {
 
     private final PaymentProofRepository proofRepository;
     private final BookingRepository bookingRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
-    public PaymentService(PaymentProofRepository proofRepository, BookingRepository bookingRepository) {
+    public PaymentService(PaymentProofRepository proofRepository, BookingRepository bookingRepository,
+                          ApplicationEventPublisher eventPublisher) {
         this.proofRepository = proofRepository;
         this.bookingRepository = bookingRepository;
+        this.eventPublisher = eventPublisher;
     }
 
     /** An uploaded file that passed the checks */
@@ -91,6 +96,9 @@ public class PaymentService {
             throw new InvalidRequestException("Only the payment of a PENDING booking can be reviewed");
         }
         booking.setPaymentStatus(decision);
+        if (decision == PaymentStatus.REJECTED) {
+            eventPublisher.publishEvent(new PaymentRejectedEvent(bookingId)); // "please upload a new proof" email
+        }
         return BookingResponse.from(booking);
     }
 
