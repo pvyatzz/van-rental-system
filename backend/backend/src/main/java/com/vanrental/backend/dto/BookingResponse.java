@@ -2,6 +2,7 @@ package com.vanrental.backend.dto;
 
 import com.vanrental.backend.model.Booking;
 import com.vanrental.backend.model.BookingStatus;
+import com.vanrental.backend.model.PaymentStatus;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -16,6 +17,7 @@ public record BookingResponse(
         Long customerId,
         String customerName,
         String customerContactNumber,
+        String customerEmail,
         LocalDate startDate,
         LocalDate endDate,
         String purpose,
@@ -24,9 +26,14 @@ public record BookingResponse(
         Double pickupLongitude,
         BookingStatus status,
         BigDecimal totalPrice,
+        BigDecimal downPayment,   // null for bookings made before down payments existed
+        BigDecimal balanceDue,    // totalPrice minus the down payment: what's left to pay at pickup
+        PaymentStatus paymentStatus,
         Instant createdAt
 ) {
     public static BookingResponse from(Booking booking) {
+        BigDecimal down = booking.getDownPayment();
+        BigDecimal balance = down == null ? booking.getTotalPrice() : booking.getTotalPrice().subtract(down);
         return new BookingResponse(
                 booking.getId(),
                 booking.getReference(),
@@ -35,6 +42,7 @@ public record BookingResponse(
                 booking.getCustomer().getId(),
                 booking.getCustomer().getFullName(),
                 booking.getCustomer().getContactNumber(),
+                booking.getCustomer().getEmail(),
                 booking.getStartDate(),
                 booking.getEndDate(),
                 booking.getPurpose(),
@@ -43,6 +51,9 @@ public record BookingResponse(
                 booking.getPickupLongitude(),
                 booking.getStatus(),
                 booking.getTotalPrice(),
+                down,
+                balance,
+                booking.getPaymentStatus(),
                 booking.getCreatedAt()
         );
     }

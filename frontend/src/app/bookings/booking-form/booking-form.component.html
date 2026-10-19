@@ -117,6 +117,38 @@
       }
     </fieldset>
 
+    <!-- 6. Down payment -->
+    <fieldset class="payment" id="bank-acc">
+      <legend>Down payment</legend>
+      <p>
+        To reserve the van, send a <strong>{{ downPayment() | currency: 'PHP' : 'symbol' : '1.0-0' }}</strong> down payment
+        by scanning this QR code with <strong>GCash</strong> or any bank app that supports <strong>InstaPay</strong>.
+        It is part of your total, not an extra fee.
+      </p>
+      <div class="qr-row">
+        <img class="qr" src="/images/gcash-qr.jpg" alt="GCash / InstaPay QR code for the down payment" />
+        <div class="payment-summary">
+          @if (days() > 0 && selectedVehicle()) {
+            <span>Total <strong>{{ estimatedTotal() | currency: 'PHP' : 'symbol' : '1.0-0' }}</strong></span>
+            <span>Down payment now <strong>{{ downPayment() | currency: 'PHP' : 'symbol' : '1.0-0' }}</strong></span>
+            <span>Balance at pickup <strong>{{ estimatedBalance() | currency: 'PHP' : 'symbol' : '1.0-0' }}</strong></span>
+          }
+          <ol>
+            <li>Scan the QR code and send {{ downPayment() | currency: 'PHP' : 'symbol' : '1.0-0' }}.</li>
+            <li>Take a screenshot of the successful transfer.</li>
+            <li>Upload it below and request your booking.</li>
+          </ol>
+        </div>
+      </div>
+
+      <p class="proof-label">Proof of payment</p>
+      <app-proof-upload (fileChange)="onProofChange($event)" />
+      @if (proofMissing()) {
+        <p class="field-error">Please upload a screenshot of your down payment.</p>
+      }
+      <p class="hint">We'll check the payment and confirm your booking. If anything is wrong, we'll email you.</p>
+    </fieldset>
+
     @if (submitError()) {
       <p class="submit-error" role="alert">{{ submitError() }}</p>
     }

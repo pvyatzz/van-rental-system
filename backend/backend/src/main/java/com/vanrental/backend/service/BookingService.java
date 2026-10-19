@@ -11,9 +11,11 @@ import com.vanrental.backend.exception.ResourceNotFoundException;
 import com.vanrental.backend.model.Booking;
 import com.vanrental.backend.model.BookingStatus;
 import com.vanrental.backend.model.Customer;
+import com.vanrental.backend.model.PaymentStatus;
 import com.vanrental.backend.model.Vehicle;
 import com.vanrental.backend.model.VehicleStatus;
 import com.vanrental.backend.notification.BookingConfirmedEvent;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import com.vanrental.backend.repository.BookingRepository;
 import com.vanrental.backend.repository.BookingSpecifications;
@@ -23,6 +25,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -38,29 +41,45 @@ public class BookingService {
     private final VehicleRepository vehicleRepository;
     private final CustomerRepository customerRepository;
     private final CustomerService customerService;
+    private final PaymentService paymentService;
     private final ApplicationEventPublisher eventPublisher;
+    private final BigDecimal downPayment;
 
     public BookingService(BookingRepository bookingRepository,
                           VehicleRepository vehicleRepository,
                           CustomerRepository customerRepository,
                           CustomerService customerService,
-                          ApplicationEventPublisher eventPublisher) {
+                          PaymentService paymentService,
+                          ApplicationEventPublisher eventPublisher,
+                          @Value("${app.booking.down-payment}") BigDecimal downPayment) {
         this.bookingRepository = bookingRepository;
         this.vehicleRepository = vehicleRepository;
         this.customerRepository = customerRepository;
         this.customerService = customerService;
+        this.paymentService = paymentService;
         this.eventPublisher = eventPublisher;
+        this.downPayment = downPayment;
+    }
+
+    public BigDecimal downPayment() {
+        return downPayment;
     }
 
     /**
-     * A signed-in customer books. The customer record is created/updated in the SAME transaction as the
-     * booking, so if the dates turn out to be taken, no half-made customer is left behind.
+     * A signed-in customer books and attaches proof of the down payment.
+     * Everything happens in ONE transaction: if anything fails (bad image, dates taken),
+     * no customer, booking or image is left behind.
      */
     @Transactional
-    public BookingResponse createForCustomer(CustomerBookingRequest request, GoogleIdentity identity) {
+    public BookingResponse createForCustomer(CustomerBookingRequest request, GoogleIdentity identity,
+                                             MultipartFile paymentProof) {
         validateDates(request.startDate(), request.endDate());
+        PaymentService.ValidatedImage proof = paymentService.validate(paymentProof); // before saving anything
         Customer customer = customerService.findOrCreateFromGoogle(identity, request.contactNumber());
-        return create(request.withCustomer(customer.getId()));
+        Booking booking = createBooking(request.withCustomer(customer.getId()));
+        booking.setDownPayment(downPayment.min(booking.getTotalPrice())); // never more than the whole price
+        paymentService.attachProof(booking, proof);
+        return BookingResponse.from(booking);
     }
 
     /** The signed-in customer's own bookings, newest first */
@@ -111,6 +130,10 @@ public class BookingService {
 
     @Transactional
     public BookingResponse create(BookingRequest request) {
+        return BookingResponse.from(createBooking(request));
+    }
+
+    private Booking createBooking(BookingRequest request) {
         validateDates(request.startDate(), request.endDate());
         validatePickup(request);
         Vehicle vehicle = lockVehicle(request.vehicleId());
@@ -120,7 +143,7 @@ public class BookingService {
         Booking booking = new Booking();
         applyRequest(booking, request, vehicle, customer);
         booking.setStatus(BookingStatus.PENDING);
-        return BookingResponse.from(bookingRepository.save(booking));
+        return bookingRepository.save(booking);
     }
 
     @Transactional
@@ -168,6 +191,11 @@ public class BookingService {
             throw new InvalidRequestException(
                     "Cannot change booking status from " + booking.getStatus() + " to " + newStatus);
         }
+        // Accepting a booking means the down payment arrived: the admin must verify it first
+        if (newStatus == BookingStatus.CONFIRMED && booking.getPaymentStatus() != null
+                && booking.getPaymentStatus() != PaymentStatus.VERIFIED) {
+            throw new InvalidRequestException("Verify the down payment before confirming this booking");
+        }
         booking.setStatus(newStatus);
         if (newStatus == BookingStatus.CONFIRMED) {
             // Listeners (the email) run after this transaction commits — see NotificationService
@@ -178,7 +206,9 @@ public class BookingService {
 
     @Transactional
     public void delete(Long id) {
-        bookingRepository.delete(getBooking(id));
+        Booking booking = getBooking(id);
+        paymentService.deleteProofOf(id); // the proof points at the booking, so it goes first
+        bookingRepository.delete(booking);
     }
 
     @Transactional(readOnly = true)

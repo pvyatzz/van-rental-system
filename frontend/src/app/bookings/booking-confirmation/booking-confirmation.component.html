@@ -1,14 +1,38 @@
 <section class="page">
   @if (booking(); as b) {
-    <div class="banner">
-      <h1>Booking request received</h1>
-      <p>
-        Thank you, {{ b.customerName }}! Your booking is <strong>pending</strong>. We'll contact you at
-        <strong>{{ b.customerContactNumber }}</strong> to confirm it.
-      </p>
-      <p class="keep">Keep your reference <strong>{{ b.reference }}</strong>. You can reopen this page anytime with
-        this link.</p>
-    </div>
+    <!-- The page is also opened later from "My bookings", so the banner follows the current state -->
+    @switch (b.status) {
+      @case ('CONFIRMED') {
+        <div class="banner">
+          <h1>Booking confirmed</h1>
+          <p>See you on {{ b.startDate | date: 'EEE, MMM d' }}, {{ b.customerName }}!</p>
+        </div>
+      }
+      @case ('CANCELLED') {
+        <div class="banner neutral"><h1>Booking cancelled</h1></div>
+      }
+      @case ('COMPLETED') {
+        <div class="banner neutral"><h1>Trip completed</h1><p>Thank you for renting with us.</p></div>
+      }
+      @default {
+        @if (b.paymentStatus === 'REJECTED') {
+          <div class="banner warn">
+            <h1>Please check your down payment</h1>
+            <p>We couldn't confirm your payment from the screenshot you sent. Please upload a new one below.</p>
+          </div>
+        } @else {
+          <div class="banner">
+            <h1>Booking request received</h1>
+            <p>
+              Thank you, {{ b.customerName }}! We'll check your down payment and confirm your booking. We'll email
+              <strong>{{ b.customerEmail }}</strong> and may call <strong>{{ b.customerContactNumber }}</strong>.
+            </p>
+          </div>
+        }
+      }
+    }
+    <p class="keep">Keep your reference <strong>{{ b.reference }}</strong>. You can reopen this page anytime from
+      <a routerLink="/my-bookings">My bookings</a>.</p>
 
     <dl class="summary">
       <dt>Reference</dt>
@@ -48,7 +72,33 @@
 
       <dt>Total</dt>
       <dd class="total">{{ b.totalPrice | currency: 'PHP' : 'symbol' : '1.0-2' }}</dd>
+
+      @if (b.downPayment !== null) {
+        <dt>Down payment</dt>
+        <dd>
+          {{ b.downPayment | currency: 'PHP' : 'symbol' : '1.0-2' }}
+          <span class="pay" [attr.data-payment]="b.paymentStatus">{{ paymentLabel(b) }}</span>
+        </dd>
+
+        <dt>Balance at pickup</dt>
+        <dd>{{ b.balanceDue | currency: 'PHP' : 'symbol' : '1.0-2' }}</dd>
+      }
     </dl>
+
+    <!-- Re-upload after a rejection (only the customer who booked can do this; the server checks) -->
+    @if (b.status === 'PENDING' && b.paymentStatus === 'REJECTED' && auth.isCustomer()) {
+      <section class="reupload">
+        <h2>Upload a new proof of payment</h2>
+        <p>Make sure the screenshot shows the amount, the date and the reference number of the transfer.</p>
+        <app-proof-upload (fileChange)="newProof.set($event)" />
+        @if (reuploadError()) {
+          <p class="error" role="alert">{{ reuploadError() }}</p>
+        }
+        <button type="button" class="btn" [disabled]="!newProof() || uploading()" (click)="reupload(b)">
+          {{ uploading() ? 'Uploading…' : 'Send new proof' }}
+        </button>
+      </section>
+    }
 
     <a class="btn" routerLink="/vehicles">Back to vans</a>
   } @else if (error()) {

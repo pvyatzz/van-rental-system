@@ -13,6 +13,7 @@ import { VehicleService } from '../../services/vehicle.service';
 import { rentalDays, todayIso } from '../../shared/dates';
 import { PickupMapComponent, PickupPoint } from '../../shared/pickup-map/pickup-map.component';
 import { problemMessage } from '../../shared/problem';
+import { ProofUploadComponent } from '../../shared/proof-upload/proof-upload.component';
 
 type AvailabilityState = 'idle' | 'checking' | 'available' | 'unavailable' | 'error';
 
@@ -33,7 +34,7 @@ function dateRangeValidator(group: AbstractControl): ValidationErrors | null {
 
 @Component({
   selector: 'app-booking-form',
-  imports: [ReactiveFormsModule, CurrencyPipe, PickupMapComponent],
+  imports: [ReactiveFormsModule, CurrencyPipe, PickupMapComponent, ProofUploadComponent],
   templateUrl: './booking-form.component.html',
   styleUrl: './booking-form.component.scss'
 })
@@ -53,6 +54,12 @@ export class BookingFormComponent implements OnInit {
   readonly availability = signal<AvailabilityState>('idle');
   readonly submitting = signal(false);
   readonly submitError = signal<string | null>(null);
+
+  /** ₱ amount from the server (GET /api/bookings/payment-info) */
+  readonly downPayment = signal<number | null>(null);
+  /** The payment screenshot. Files don't fit reactive forms well, so it's a plain signal. */
+  readonly paymentProof = signal<File | null>(null);
+  readonly proofMissing = signal(false);
 
   readonly form = this.fb.nonNullable.group({
     vehicleId: [0, [Validators.required, Validators.min(1)]],
@@ -94,6 +101,9 @@ export class BookingFormComponent implements OnInit {
     return vehicle ? vehicle.ratePerDay * this.days() : 0;
   });
 
+  /** What's left to pay at pickup after the down payment */
+  readonly estimatedBalance = computed(() => Math.max(0, this.estimatedTotal() - (this.downPayment() ?? 0)));
+
   constructor() {
     // Real-time availability: every time the van or dates change, ask the backend.
     this.form.valueChanges.pipe(
@@ -116,6 +126,7 @@ export class BookingFormComponent implements OnInit {
       next: vehicles => this.vehicles.set(vehicles),
       error: err => this.submitError.set(problemMessage(err))
     });
+    this.bookingService.paymentInfo().subscribe(info => this.downPayment.set(info.downPayment));
 
     const preselected = Number(this.vehicleId());
     if (preselected) {
@@ -124,7 +135,9 @@ export class BookingFormComponent implements OnInit {
   }
 
   submit(): void {
-    if (this.form.invalid || this.availability() !== 'available') {
+    const proof = this.paymentProof();
+    this.proofMissing.set(!proof);
+    if (this.form.invalid || this.availability() !== 'available' || !proof) {
       this.form.markAllAsTouched(); // reveal validation messages on untouched fields
       return;
     }
@@ -142,7 +155,7 @@ export class BookingFormComponent implements OnInit {
       pickupAddress: value.pickup.address.trim() || null,
       pickupLatitude: value.pickup.latitude,
       pickupLongitude: value.pickup.longitude
-    }).subscribe({
+    }, proof).subscribe({
       next: booking => this.router.navigate(['/bookings', booking.reference]),
       error: err => {
         this.submitting.set(false);
@@ -152,6 +165,13 @@ export class BookingFormComponent implements OnInit {
         }
       }
     });
+  }
+
+  onProofChange(file: File | null): void {
+    this.paymentProof.set(file);
+    if (file) {
+      this.proofMissing.set(false);
+    }
   }
 
   /** Called by <app-pickup-map> when a pin is dropped (or removed → null) */

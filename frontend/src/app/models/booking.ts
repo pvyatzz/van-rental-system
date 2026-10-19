@@ -1,6 +1,9 @@
 // Mirrors the backend DTOs in com.vanrental.backend.dto
 export type BookingStatus = 'PENDING' | 'CONFIRMED' | 'CANCELLED' | 'COMPLETED';
 
+/** The ₱500 down payment: proof uploaded (SUBMITTED), then checked by the admin */
+export type PaymentStatus = 'SUBMITTED' | 'VERIFIED' | 'REJECTED';
+
 /**
  * What a signed-in customer sends (CustomerBookingRequest). Dates are 'YYYY-MM-DD' strings.
  * No customer id or name: the backend takes those from the Google sign-in.
@@ -26,6 +29,7 @@ export interface Booking {
   customerId: number;
   customerName: string;
   customerContactNumber: string;
+  customerEmail: string | null;
   startDate: string;
   endDate: string;
   purpose: string | null;
@@ -34,6 +38,11 @@ export interface Booking {
   pickupLongitude: number | null;
   status: BookingStatus;
   totalPrice: number;
+  /** null for bookings made before down payments existed */
+  downPayment: number | null;
+  /** totalPrice minus the down payment: what's left to pay at pickup */
+  balanceDue: number;
+  paymentStatus: PaymentStatus | null;
   createdAt: string;
 }
 

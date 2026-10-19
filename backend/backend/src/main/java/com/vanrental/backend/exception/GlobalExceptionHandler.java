@@ -8,6 +8,8 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.multipart.support.MissingServletRequestPartException;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.LinkedHashMap;
@@ -49,6 +51,21 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(ResponseStatusException.class)
     public ProblemDetail handleResponseStatus(ResponseStatusException ex) {
         return ProblemDetail.forStatusAndDetail(ex.getStatusCode(), ex.getReason());
+    }
+
+    // Upload bigger than spring.servlet.multipart.max-file-size
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ProblemDetail handleTooLarge(MaxUploadSizeExceededException ex) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.CONTENT_TOO_LARGE, "The image is too large (max 5 MB)");
+    }
+
+    // A required multipart part is missing, e.g. no payment screenshot attached
+    @ExceptionHandler(MissingServletRequestPartException.class)
+    public ProblemDetail handleMissingPart(MissingServletRequestPartException ex) {
+        String detail = "paymentProof".equals(ex.getRequestPartName())
+                ? "Please attach a screenshot or photo of your down payment"
+                : "Missing part '" + ex.getRequestPartName() + "'";
+        return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, detail);
     }
 
     // e.g. ?status=FOO or ?vehicleId=abc — a query/path value that can't be converted to its type

@@ -60,6 +60,14 @@ public class Booking {
     @Column(nullable = false)
     private BookingStatus status;
 
+    // ₱500 paid up front (part of totalPrice). Null for bookings made before down payments existed.
+    @Column(name = "down_payment", precision = 10, scale = 2)
+    private BigDecimal downPayment;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "payment_status", length = 20)
+    private PaymentStatus paymentStatus;
+
     // Snapshot of rate × days at booking time, so later rate changes don't alter old bookings
     @Column(name = "total_price", nullable = false, precision = 10, scale = 2)
     private BigDecimal totalPrice;

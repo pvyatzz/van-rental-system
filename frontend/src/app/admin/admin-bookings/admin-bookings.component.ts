@@ -1,10 +1,10 @@
 import { CurrencyPipe, DatePipe } from '@angular/common';
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { catchError, debounceTime, map, of, startWith, switchMap, tap } from 'rxjs';
 
-import { Booking, BookingStatus } from '../../models/booking';
+import { Booking, BookingStatus, PaymentStatus } from '../../models/booking';
 import { Vehicle } from '../../models/vehicle';
 import { BookingService } from '../../services/booking.service';
 import { VehicleService } from '../../services/vehicle.service';
@@ -29,9 +29,11 @@ const ACTIONS: Record<BookingStatus, StatusAction[]> = {
   selector: 'app-admin-bookings',
   imports: [ReactiveFormsModule, CurrencyPipe, DatePipe],
   templateUrl: './admin-bookings.component.html',
-  styleUrl: './admin-bookings.component.scss'
+  styleUrl: './admin-bookings.component.scss',
+  // Escape closes the proof dialog, wherever the keyboard focus is
+  host: { '(document:keydown.escape)': 'closeProof()' }
 })
-export class AdminBookingsComponent implements OnInit {
+export class AdminBookingsComponent implements OnInit, OnDestroy {
   private readonly fb = inject(FormBuilder);
   private readonly bookingService = inject(BookingService);
   private readonly vehicleService = inject(VehicleService);
@@ -117,5 +119,68 @@ export class AdminBookingsComponent implements OnInit {
 
   days(booking: Booking): number {
     return rentalDays(booking.startDate, booking.endDate);
+  }
+
+  // ---- Down payment ----
+
+  readonly paymentLabels: Record<PaymentStatus, string> = {
+    SUBMITTED: 'to check',
+    VERIFIED: 'verified',
+    REJECTED: 'rejected'
+  };
+
+  /** The booking whose proof is open in the dialog */
+  readonly proofFor = signal<Booking | null>(null);
+  readonly proofUrl = signal<string | null>(null);
+  readonly proofError = signal<string | null>(null);
+  readonly reviewing = signal(false);
+
+  /** Mirrors the backend rule: a booking with a down payment can only be confirmed once it's verified */
+  needsPaymentCheck(b: Booking): boolean {
+    return b.paymentStatus !== null && b.paymentStatus !== 'VERIFIED';
+  }
+
+  openProof(b: Booking): void {
+    this.closeProof();
+    this.proofFor.set(b);
+    // <img src="/api/..."> can't send our login token, so download the image with HttpClient
+    // (which goes through the auth interceptor) and show it from a local object URL
+    this.bookingService.paymentProof(b.id).subscribe({
+      next: blob => this.proofUrl.set(URL.createObjectURL(blob)),
+      error: err => this.proofError.set(problemMessage(err))
+    });
+  }
+
+  closeProof(): void {
+    const url = this.proofUrl();
+    if (url) {
+      URL.revokeObjectURL(url); // free the image from memory
+    }
+    this.proofUrl.set(null);
+    this.proofError.set(null);
+    this.proofFor.set(null);
+  }
+
+  review(b: Booking, decision: PaymentStatus): void {
+    if (decision === 'REJECTED'
+        && !confirm(`Reject the down payment for ${b.reference}? The customer will be asked to upload a new proof.`)) {
+      return;
+    }
+    this.reviewing.set(true);
+    this.bookingService.reviewPayment(b.id, decision).subscribe({
+      next: updated => {
+        this.bookings.update(list => list.map(x => (x.id === updated.id ? updated : x)));
+        this.proofFor.set(updated);
+        this.reviewing.set(false);
+      },
+      error: err => {
+        this.proofError.set(problemMessage(err));
+        this.reviewing.set(false);
+      }
+    });
+  }
+
+  ngOnDestroy(): void {
+    this.closeProof();
   }
 }

@@ -9,6 +9,7 @@ import com.vanrental.backend.exception.InvalidRequestException;
 import com.vanrental.backend.model.Booking;
 import com.vanrental.backend.model.BookingStatus;
 import com.vanrental.backend.model.Customer;
+import com.vanrental.backend.model.PaymentStatus;
 import com.vanrental.backend.model.Vehicle;
 import com.vanrental.backend.model.VehicleStatus;
 import com.vanrental.backend.notification.BookingConfirmedEvent;
@@ -18,10 +19,11 @@ import com.vanrental.backend.repository.VehicleRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -51,9 +53,10 @@ class BookingServiceTest {
     @Mock
     CustomerService customerService;
     @Mock
+    PaymentService paymentService;
+    @Mock
     ApplicationEventPublisher eventPublisher;
 
-    @InjectMocks
     BookingService bookingService;
 
     Vehicle van;
@@ -63,6 +66,9 @@ class BookingServiceTest {
 
     @BeforeEach
     void setUp() {
+        // Built by hand (not @InjectMocks) because the ₱500 down payment is a plain value, not a mock
+        bookingService = new BookingService(bookingRepository, vehicleRepository, customerRepository,
+                customerService, paymentService, eventPublisher, new BigDecimal("500"));
         van = new Vehicle(1L, "Mitsubishi L300 FB", 16, new BigDecimal("3500.00"), VehicleStatus.AVAILABLE, null);
         customer = new Customer(10L, "Juan Dela Cruz", "09171234567", null);
         start = LocalDate.now().plusDays(7);
@@ -153,21 +159,59 @@ class BookingServiceTest {
         when(customerRepository.findById(10L)).thenReturn(Optional.of(linked));
         when(bookingRepository.findOverlapping(1L, start, end)).thenReturn(List.of());
         when(bookingRepository.save(any(Booking.class))).thenAnswer(inv -> inv.getArgument(0));
+        MultipartFile screenshot = new MockMultipartFile("paymentProof", "gcash.png", "image/png", new byte[]{1});
+        PaymentService.ValidatedImage image = new PaymentService.ValidatedImage(ImageType.PNG, new byte[]{1}, "gcash.png");
+        when(paymentService.validate(screenshot)).thenReturn(image);
 
         BookingResponse result = bookingService.createForCustomer(
-                new CustomerBookingRequest(1L, "09171234567", start, end, null, null, null, null), maria);
+                new CustomerBookingRequest(1L, "09171234567", start, end, null, null, null, null), maria, screenshot);
 
         assertThat(result.customerId()).isEqualTo(10L);
         assertThat(result.customerName()).isEqualTo("Maria Santos");
+        assertThat(result.downPayment()).isEqualByComparingTo("500");
+        assertThat(result.balanceDue()).isEqualByComparingTo("10000"); // 10,500 − 500
+        verify(paymentService).attachProof(any(Booking.class), org.mockito.ArgumentMatchers.eq(image));
     }
 
     @Test
     void badDatesAreRejectedBeforeAnyCustomerIsCreated() {
         GoogleIdentity maria = new GoogleIdentity("google-123", "maria@gmail.com", "Maria Santos");
         assertThatThrownBy(() -> bookingService.createForCustomer(
-                new CustomerBookingRequest(1L, "0917", end, start, null, null, null, null), maria))
+                new CustomerBookingRequest(1L, "0917", end, start, null, null, null, null), maria, null))
                 .isInstanceOf(InvalidRequestException.class);
         verify(customerService, never()).findOrCreateFromGoogle(any(), any());
+    }
+
+    @Test
+    void anInvalidProofStopsTheBookingBeforeAnythingIsSaved() {
+        GoogleIdentity maria = new GoogleIdentity("google-123", "maria@gmail.com", "Maria Santos");
+        when(paymentService.validate(null)).thenThrow(new InvalidRequestException("Please attach a screenshot"));
+        assertThatThrownBy(() -> bookingService.createForCustomer(
+                new CustomerBookingRequest(1L, "0917", start, end, null, null, null, null), maria, null))
+                .isInstanceOf(InvalidRequestException.class);
+        verify(customerService, never()).findOrCreateFromGoogle(any(), any());
+        verify(bookingRepository, never()).save(any());
+    }
+
+    @Test
+    void cannotConfirmBeforeTheDownPaymentIsVerified() {
+        Booking pending = booking(5L, start, end, BookingStatus.PENDING);
+        pending.setPaymentStatus(PaymentStatus.SUBMITTED);
+        when(bookingRepository.findWithDetailsById(5L)).thenReturn(Optional.of(pending));
+
+        assertThatThrownBy(() -> bookingService.changeStatus(5L, BookingStatus.CONFIRMED))
+                .isInstanceOf(InvalidRequestException.class)
+                .hasMessageContaining("Verify the down payment");
+        verify(eventPublisher, never()).publishEvent(any());
+    }
+
+    @Test
+    void canConfirmOnceTheDownPaymentIsVerified() {
+        Booking pending = booking(5L, start, end, BookingStatus.PENDING);
+        pending.setPaymentStatus(PaymentStatus.VERIFIED);
+        when(bookingRepository.findWithDetailsById(5L)).thenReturn(Optional.of(pending));
+
+        assertThat(bookingService.changeStatus(5L, BookingStatus.CONFIRMED).status()).isEqualTo(BookingStatus.CONFIRMED);
     }
 
     @Test

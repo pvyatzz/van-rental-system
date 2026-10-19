@@ -53,9 +53,10 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() // CORS preflight
                         .requestMatchers(HttpMethod.POST, "/api/auth/login", "/api/auth/google").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/vehicles", "/api/vehicles/*").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/bookings/availability", "/api/bookings/ref/*").permitAll()
-                        // Customers (signed in with Google) can book and see their own bookings
-                        .requestMatchers(HttpMethod.POST, "/api/bookings").hasRole("CUSTOMER")
+                        .requestMatchers(HttpMethod.GET, "/api/bookings/availability", "/api/bookings/ref/*",
+                                "/api/bookings/payment-info").permitAll()
+                        // Customers (signed in with Google) can book, see their own bookings, re-upload payment proof
+                        .requestMatchers(HttpMethod.POST, "/api/bookings", "/api/bookings/ref/*/payment-proof").hasRole("CUSTOMER")
                         .requestMatchers(HttpMethod.GET, "/api/bookings/mine").hasRole("CUSTOMER")
                         .requestMatchers("/error").permitAll()
                         .anyRequest().hasRole("ADMIN"))

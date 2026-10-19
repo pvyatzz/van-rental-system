@@ -56,6 +56,7 @@
           <th>Customer</th>
           <th>Dates</th>
           <th class="num">Total</th>
+          <th>Down payment</th>
           <th>Status</th>
           <th>Actions</th>
         </tr>
@@ -85,11 +86,23 @@
               }
             </td>
             <td class="num">{{ b.totalPrice | currency: 'PHP' : 'symbol' : '1.0-2' }}</td>
+            <td class="payment">
+              @if (b.paymentStatus) {
+                <span class="pay" [attr.data-payment]="b.paymentStatus">
+                  {{ b.downPayment | currency: 'PHP' : 'symbol' : '1.0-0' }} · {{ paymentLabels[b.paymentStatus] }}
+                </span>
+                <button type="button" class="link" (click)="openProof(b)">View proof</button>
+              } @else {
+                <span class="muted">—</span>
+              }
+            </td>
             <td><span class="status" [attr.data-status]="b.status">{{ b.status }}</span></td>
             <td class="actions">
               @for (action of actions[b.status]; track action.status) {
                 <button type="button" [class]="'act ' + action.status.toLowerCase()"
-                        [disabled]="busyId() === b.id" (click)="changeStatus(b, action)">
+                        [disabled]="busyId() === b.id || (action.status === 'CONFIRMED' && needsPaymentCheck(b))"
+                        [title]="action.status === 'CONFIRMED' && needsPaymentCheck(b) ? 'Verify the down payment first' : ''"
+                        (click)="changeStatus(b, action)">
                   {{ action.label }}
                 </button>
               } @empty {
@@ -100,5 +113,40 @@
         }
       </tbody>
     </table>
+  </div>
+}
+
+<!-- Proof-of-payment viewer: a simple modal dialog -->
+@if (proofFor(); as b) {
+  <div class="backdrop" (click)="closeProof()"></div>
+  <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="proof-title">
+    <div class="dialog-head">
+      <h2 id="proof-title">Down payment · {{ b.reference }}</h2>
+      <button type="button" class="close" (click)="closeProof()" aria-label="Close">✕</button>
+    </div>
+    <p class="dialog-info">
+      {{ b.customerName }} · expected <strong>{{ b.downPayment | currency: 'PHP' : 'symbol' : '1.0-0' }}</strong>
+      · <span class="pay" [attr.data-payment]="b.paymentStatus">{{ b.paymentStatus ? paymentLabels[b.paymentStatus] : '' }}</span>
+    </p>
+    <div class="proof-image">
+      @if (proofUrl(); as url) {
+        <a [href]="url" target="_blank" rel="noopener" title="Open full size">
+          <img [src]="url" alt="Customer's proof of payment" />
+        </a>
+      } @else if (proofError()) {
+        <p class="alert">{{ proofError() }}</p>
+      } @else {
+        <p class="muted">Loading image…</p>
+      }
+    </div>
+    <p class="muted check">Check your GCash / bank history for this amount before verifying.</p>
+    @if (b.status === 'PENDING') {
+      <div class="dialog-actions">
+        <button type="button" class="act confirmed" [disabled]="reviewing() || b.paymentStatus === 'VERIFIED'"
+                (click)="review(b, 'VERIFIED')">Payment received: verify</button>
+        <button type="button" class="act cancelled" [disabled]="reviewing() || b.paymentStatus === 'REJECTED'"
+                (click)="review(b, 'REJECTED')">Not received: reject</button>
+      </div>
+    }
   </div>
 }

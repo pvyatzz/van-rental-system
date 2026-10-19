@@ -702,6 +702,50 @@ Browser: sends our token with every request, like the admin token
 
 ---
 
+## Phase 7.2: ₱500 down payment with GCash QR and proof upload
+
+**Customer:** in the booking form's **Down payment** section (`id="bank-acc"`), scan the GCash/InstaPay QR, send ₱500, upload a screenshot, and request the booking. The ₱500 is **part of the total**: "Total ₱10,500 · down payment ₱500 · balance at pickup ₱10,000".
+
+**Admin:** the bookings table has a **Down payment** column ("₱500 · to check"). **View proof** opens the screenshot. **Verify** (money arrived) or **Reject** (it didn't). **Confirm stays disabled until the payment is verified.** After a rejection the customer sees "Please check your down payment" and can upload a new screenshot.
+
+```
+SUBMITTED (customer uploaded) ──► VERIFIED (admin) ──► booking can be CONFIRMED
+        │
+        └──► REJECTED (admin) ──► customer re-uploads ──► SUBMITTED
+```
+
+### Backend
+- **`Booking.downPayment` + `paymentStatus`.** The amount is a setting (`app.booking.down-payment=500`), never more than the whole price (`min`). `GET /api/bookings/payment-info` gives the frontend the same number, so the page and the server can't disagree.
+- **`PaymentProof` entity in its own table.** The image (`byte[]` → PostgreSQL `bytea`) is *not* a column on `bookings`, so listing 100 bookings never loads 100 images. The `@OneToOne` link lives on the proof side (`booking_id`, unique).
+- **Storing images in the database vs on disk:** for a few small screenshots, the database is simplest: backups include them, and there are no file paths to manage. For many large files, use disk or cloud storage (S3 etc.) and keep only the path in the database.
+- **Multipart upload:** `POST /api/bookings` is now `multipart/form-data` with two parts: `booking` (the JSON) and `paymentProof` (the file). In the controller: `@RequestPart("booking") @Valid CustomerBookingRequest` and `@RequestPart("paymentProof") MultipartFile`.
+- **Never trust an upload's name or Content-Type.** Both are chosen by the sender. `ImageType.detect()` reads the **first bytes** ("magic numbers"): JPEG starts `FF D8 FF`, PNG `89 50 4E 47…`, WebP `RIFF….WEBP`. A text file renamed `.png` is rejected. The stored `contentType` comes from the bytes, too.
+- **Size limits in two layers:** `spring.servlet.multipart.max-file-size=5MB` (Spring refuses bigger uploads → 413 "too large"), plus a check in `PaymentService`. `server.tomcat.max-swallow-size` lets Tomcat answer politely instead of cutting the connection on a slightly-too-big upload.
+- **Order matters in `createForCustomer`:** check the image **before** creating the customer or booking. Everything is one `@Transactional`, so any failure leaves nothing behind.
+- `GET /api/bookings/{id}/payment-proof` (admin) returns the raw bytes with the right content type and `Cache-Control: no-store` (private data shouldn't sit in caches).
+- **Re-upload** (`POST /api/bookings/ref/{ref}/payment-proof`, CUSTOMER): only the customer whose Google id owns the booking. Anyone else gets **"not found"**, not "forbidden", so nobody can probe which references exist.
+- Deleting a booking deletes its proof first (the proof's foreign key points at the booking).
+
+### Frontend
+- **`shared/proof-upload/`:** a file input (`accept="image/jpeg,image/png,image/webp"`) with friendly checks (type, 5 MB) and a **preview**. `URL.createObjectURL(file)` lets an `<img>` show a local file before uploading. It must be released with `URL.revokeObjectURL`, or the image stays in memory.
+- **Sending a file + JSON together:** `FormData` with `new Blob([JSON.stringify(request)], { type: 'application/json' })` for the JSON part, plus the `File`. **Don't** set `Content-Type` yourself: the browser adds `multipart/form-data; boundary=...`, and the boundary is required.
+- **Showing a protected image:** `<img src="/api/.../payment-proof">` can't send our `Authorization` header, so it would get a 401. Instead, `HttpClient.get(url, { responseType: 'blob' })` goes through the auth interceptor, and `createObjectURL(blob)` shows it.
+- **Modal dialog:** a backdrop + `role="dialog"` + `aria-modal`; Escape closes it from anywhere (`host: { '(document:keydown.escape)': 'closeProof()' }`).
+- **The booking page follows the booking's state:** request received / please check your down payment / confirmed / cancelled. The same page is reopened from My bookings.
+- The QR image: `van-img/bank-acc.jpg` was copied to `frontend/public/images/gcash-qr.jpg`.
+
+### How it was tested
+- `PaymentServiceTest` (10): JPEG/PNG/WebP accepted by their bytes; a "program named proof.png" rejected; empty, missing and over-5-MB files rejected; path stripped from the file name; verify/reject rules; owner-only re-upload; a verified payment can't be replaced.
+- `BookingServiceTest`: a booking stores ₱500 down and the ₱10,000 balance; an invalid proof stops *before* anything is saved; Confirm is refused until VERIFIED.
+- `SecurityTest`: proof images and payment review are admin-only; payment-info is public.
+- Browser (19 checks), the full cycle: QR shown → no proof = asked for one → fake image rejected by the server → real screenshot + preview → "being checked" → admin sees "to check", Confirm disabled → proof image in the dialog → reject → customer sees the warning and re-uploads → admin verifies → Confirm works → customer sees "Booking confirmed · received ✓". No sideways scroll on a phone.
+
+### Known limitations
+- Checking that the money actually arrived is manual (your GCash history). Automatic confirmation would need a payment gateway (PayMongo, Xendit), which have fees and require business verification.
+- If two people pay for the same dates at the same moment, only one booking is created: the second gets "already booked" **after** paying. That's rare, but refunds are manual.
+
+---
+
 ## Before going online (deployment checklist)
 Everything so far runs on your computer. Before deploying (Render, Railway, a VPS):
 1. **Secrets out of the code:** the database password, `ADMIN_PASSWORD` and `JWT_SECRET` become environment variables on the server. Never use the `admin123` / dev secret defaults online.

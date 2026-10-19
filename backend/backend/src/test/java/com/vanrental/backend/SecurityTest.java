@@ -12,6 +12,7 @@ import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -51,6 +52,19 @@ class SecurityTest {
                 .andExpect(status().isOk());
         // public, so a wrong reference is "not found" (404), not "please log in" (401)
         mockMvc.perform(get("/api/bookings/ref/VR-DOESNOTEXIST")).andExpect(status().isNotFound());
+        mockMvc.perform(get("/api/bookings/payment-info"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.downPayment").value(500));
+    }
+
+    @Test
+    void paymentProofImagesAreAdminOnly() throws Exception {
+        mockMvc.perform(get("/api/bookings/1/payment-proof")).andExpect(status().isUnauthorized());
+        mockMvc.perform(get("/api/bookings/1/payment-proof").header("Authorization", "Bearer " + customerToken()))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(patch("/api/bookings/1/payment").header("Authorization", "Bearer " + customerToken())
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"status\":\"VERIFIED\"}"))
+                .andExpect(status().isForbidden());
     }
 
     @Test
