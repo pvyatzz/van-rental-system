@@ -34,6 +34,18 @@
         <dd>{{ b.purpose }}</dd>
       }
 
+      @if (b.pickupAddress || b.pickupLatitude !== null) {
+        <dt>Pickup</dt>
+        <dd>
+          {{ b.pickupAddress }}
+          @if (b.pickupLatitude !== null && b.pickupLongitude !== null) {
+            <a class="map-link" [href]="mapUrl(b.pickupLatitude, b.pickupLongitude)" target="_blank" rel="noopener">
+              View pin on map
+            </a>
+          }
+        </dd>
+      }
+
       <dt>Total</dt>
       <dd class="total">{{ b.totalPrice | currency: 'PHP' : 'symbol' : '1.0-2' }}</dd>
     </dl>

@@ -75,6 +75,14 @@
               @if (b.purpose) {
                 <span class="purpose">{{ b.purpose }}</span>
               }
+              @if (b.pickupAddress || b.pickupLatitude !== null) {
+                <span class="pickup">
+                  Pickup: {{ b.pickupAddress ?? 'pin on map' }}
+                  @if (b.pickupLatitude !== null && b.pickupLongitude !== null) {
+                    · <a [href]="mapUrl(b.pickupLatitude, b.pickupLongitude)" target="_blank" rel="noopener">Open in Google Maps</a>
+                  }
+                </span>
+              }
             </td>
             <td class="num">{{ b.totalPrice | currency: 'PHP' : 'symbol' : '1.0-2' }}</td>
             <td><span class="status" [attr.data-status]="b.status">{{ b.status }}</span></td>

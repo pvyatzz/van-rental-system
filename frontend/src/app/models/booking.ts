@@ -8,6 +8,9 @@ export interface BookingRequest {
   startDate: string;
   endDate: string;
   purpose: string | null;
+  pickupAddress: string | null;
+  pickupLatitude: number | null;
+  pickupLongitude: number | null;
 }
 
 /** What we get back: BookingResponse */
@@ -23,6 +26,9 @@ export interface Booking {
   startDate: string;
   endDate: string;
   purpose: string | null;
+  pickupAddress: string | null;
+  pickupLatitude: number | null;
+  pickupLongitude: number | null;
   status: BookingStatus;
   totalPrice: number;
   createdAt: string;

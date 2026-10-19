@@ -9,6 +9,7 @@ import { Vehicle } from '../../models/vehicle';
 import { BookingService } from '../../services/booking.service';
 import { VehicleService } from '../../services/vehicle.service';
 import { rentalDays } from '../../shared/dates';
+import { googleMapsUrl } from '../../shared/maps';
 import { problemMessage } from '../../shared/problem';
 
 interface StatusAction {
@@ -37,6 +38,7 @@ export class AdminBookingsComponent implements OnInit {
 
   readonly statuses: BookingStatus[] = ['PENDING', 'CONFIRMED', 'COMPLETED', 'CANCELLED'];
   readonly actions = ACTIONS;
+  readonly mapUrl = googleMapsUrl;
 
   readonly vehicles = signal<Vehicle[]>([]);
   readonly bookings = signal<Booking[]>([]);

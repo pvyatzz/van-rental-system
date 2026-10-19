@@ -5,6 +5,7 @@ import { RouterLink } from '@angular/router';
 import { Booking } from '../../models/booking';
 import { BookingService } from '../../services/booking.service';
 import { rentalDays } from '../../shared/dates';
+import { googleMapsUrl } from '../../shared/maps';
 import { problemMessage } from '../../shared/problem';
 
 @Component({
@@ -19,6 +20,7 @@ export class BookingConfirmationComponent implements OnInit {
   /** The :reference from the route /bookings/:reference (bound by withComponentInputBinding) */
   readonly reference = input.required<string>();
 
+  readonly mapUrl = googleMapsUrl;
   readonly booking = signal<Booking | null>(null);
   readonly error = signal<string | null>(null);
 

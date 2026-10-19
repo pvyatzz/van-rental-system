@@ -107,6 +107,23 @@
       }
     </fieldset>
 
+    <!-- 5. Pickup location (optional) -->
+    <fieldset formGroupName="pickup">
+      <legend>Pickup location <span class="muted">(optional)</span></legend>
+      <label for="pickupAddress">Address or landmark</label>
+      <input id="pickupAddress" formControlName="address" autocomplete="street-address"
+             placeholder="e.g. SM Megamall, Ortigas, main entrance" />
+      @if (showError('pickup.address')) {
+        <p class="field-error">Please keep this under 255 characters.</p>
+      }
+      <p class="hint">Tap the map to drop a pin where we should pick you up.</p>
+      <app-pickup-map (pointChange)="onPickupPoint($event)" />
+      @if (form.controls.pickup.controls.latitude.value !== null) {
+        <p class="hint">Pin set at {{ form.controls.pickup.controls.latitude.value }},
+          {{ form.controls.pickup.controls.longitude.value }}</p>
+      }
+    </fieldset>
+
     @if (submitError()) {
       <p class="submit-error" role="alert">{{ submitError() }}</p>
     }

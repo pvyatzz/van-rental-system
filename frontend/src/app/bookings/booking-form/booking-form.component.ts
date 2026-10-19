@@ -12,6 +12,7 @@ import { BookingService } from '../../services/booking.service';
 import { CustomerService } from '../../services/customer.service';
 import { VehicleService } from '../../services/vehicle.service';
 import { rentalDays, todayIso } from '../../shared/dates';
+import { PickupMapComponent, PickupPoint } from '../../shared/pickup-map/pickup-map.component';
 import { problemMessage } from '../../shared/problem';
 
 type AvailabilityState = 'idle' | 'checking' | 'available' | 'unavailable' | 'error';
@@ -33,7 +34,7 @@ function dateRangeValidator(group: AbstractControl): ValidationErrors | null {
 
 @Component({
   selector: 'app-booking-form',
-  imports: [ReactiveFormsModule, CurrencyPipe],
+  imports: [ReactiveFormsModule, CurrencyPipe, PickupMapComponent],
   templateUrl: './booking-form.component.html',
   styleUrl: './booking-form.component.scss'
 })
@@ -70,7 +71,13 @@ export class BookingFormComponent implements OnInit {
       contactNumber: ['', [Validators.required, Validators.maxLength(20)]],
       email: ['', [Validators.email, Validators.maxLength(100)]]
     }),
-    purpose: ['', Validators.maxLength(255)]
+    purpose: ['', Validators.maxLength(255)],
+    // Optional pickup location: typed address and/or a pin from the map
+    pickup: this.fb.nonNullable.group({
+      address: ['', Validators.maxLength(255)],
+      latitude: [null as number | null],
+      longitude: [null as number | null]
+    })
   });
 
   /** The form's current value as a signal, so computed() values below update automatically */
@@ -144,7 +151,10 @@ export class BookingFormComponent implements OnInit {
         customerId: saved.id,
         startDate: value.dates.startDate,
         endDate: value.dates.endDate,
-        purpose: value.purpose.trim() || null
+        purpose: value.purpose.trim() || null,
+        pickupAddress: value.pickup.address.trim() || null,
+        pickupLatitude: value.pickup.latitude,
+        pickupLongitude: value.pickup.longitude
       }))
     ).subscribe({
       next: booking => this.router.navigate(['/bookings', booking.reference]),
@@ -155,6 +165,14 @@ export class BookingFormComponent implements OnInit {
           this.availability.set('unavailable'); // someone else booked these dates first
         }
       }
+    });
+  }
+
+  /** Called by <app-pickup-map> when a pin is dropped (or removed → null) */
+  onPickupPoint(point: PickupPoint | null): void {
+    this.form.controls.pickup.patchValue({
+      latitude: point?.latitude ?? null,
+      longitude: point?.longitude ?? null
     });
   }
 
