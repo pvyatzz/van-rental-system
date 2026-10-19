@@ -11,6 +11,8 @@ import com.vanrental.backend.model.BookingStatus;
 import com.vanrental.backend.model.Customer;
 import com.vanrental.backend.model.Vehicle;
 import com.vanrental.backend.model.VehicleStatus;
+import com.vanrental.backend.notification.BookingConfirmedEvent;
+import org.springframework.context.ApplicationEventPublisher;
 import com.vanrental.backend.repository.BookingRepository;
 import com.vanrental.backend.repository.BookingSpecifications;
 import com.vanrental.backend.repository.CustomerRepository;
@@ -33,13 +35,16 @@ public class BookingService {
     private final BookingRepository bookingRepository;
     private final VehicleRepository vehicleRepository;
     private final CustomerRepository customerRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     public BookingService(BookingRepository bookingRepository,
                           VehicleRepository vehicleRepository,
-                          CustomerRepository customerRepository) {
+                          CustomerRepository customerRepository,
+                          ApplicationEventPublisher eventPublisher) {
         this.bookingRepository = bookingRepository;
         this.vehicleRepository = vehicleRepository;
         this.customerRepository = customerRepository;
+        this.eventPublisher = eventPublisher;
     }
 
     /** All filters are optional (null = don't filter on it). from/to keep bookings that overlap that window. */
@@ -127,6 +132,10 @@ public class BookingService {
                     "Cannot change booking status from " + booking.getStatus() + " to " + newStatus);
         }
         booking.setStatus(newStatus);
+        if (newStatus == BookingStatus.CONFIRMED) {
+            // Listeners (the email) run after this transaction commits — see NotificationService
+            eventPublisher.publishEvent(new BookingConfirmedEvent(booking.getId()));
+        }
         return BookingResponse.from(booking);
     }
 

@@ -9,6 +9,7 @@ import com.vanrental.backend.model.BookingStatus;
 import com.vanrental.backend.model.Customer;
 import com.vanrental.backend.model.Vehicle;
 import com.vanrental.backend.model.VehicleStatus;
+import com.vanrental.backend.notification.BookingConfirmedEvent;
 import com.vanrental.backend.repository.BookingRepository;
 import com.vanrental.backend.repository.CustomerRepository;
 import com.vanrental.backend.repository.VehicleRepository;
@@ -18,6 +19,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -44,6 +46,8 @@ class BookingServiceTest {
     VehicleRepository vehicleRepository;
     @Mock
     CustomerRepository customerRepository;
+    @Mock
+    ApplicationEventPublisher eventPublisher;
 
     @InjectMocks
     BookingService bookingService;
@@ -134,6 +138,26 @@ class BookingServiceTest {
 
         assertThatThrownBy(() -> bookingService.changeStatus(5L, BookingStatus.CONFIRMED))
                 .isInstanceOf(InvalidRequestException.class);
+    }
+
+    @Test
+    void confirmingPublishesTheEmailEvent() {
+        Booking pending = booking(5L, start, end, BookingStatus.PENDING);
+        when(bookingRepository.findWithDetailsById(5L)).thenReturn(Optional.of(pending));
+
+        bookingService.changeStatus(5L, BookingStatus.CONFIRMED);
+
+        verify(eventPublisher).publishEvent(new BookingConfirmedEvent(5L));
+    }
+
+    @Test
+    void cancellingSendsNoConfirmationEmail() {
+        Booking pending = booking(5L, start, end, BookingStatus.PENDING);
+        when(bookingRepository.findWithDetailsById(5L)).thenReturn(Optional.of(pending));
+
+        bookingService.changeStatus(5L, BookingStatus.CANCELLED);
+
+        verify(eventPublisher, never()).publishEvent(any());
     }
 
     private Booking booking(Long id, LocalDate from, LocalDate to, BookingStatus status) {

@@ -496,3 +496,53 @@ $env:ADMIN_PASSWORD = "a-long-password"; $env:JWT_SECRET = "at-least-32-random-c
 - One admin account, set via environment variables. For staff with their own logins, store users in a database table (`UserDetailsService` backed by JPA).
 - No limit on login attempts. Add rate limiting (or lock after N failures) before going public.
 - Logging out doesn't invalidate an already-copied token until it expires (8 h).
+
+---
+
+## Phase 6.2: Email when a booking is confirmed
+
+When the admin clicks **Confirm**, the customer gets an email with the reference, van, dates and total, if they gave an email address.
+
+### The flow: events, not direct calls
+```
+BookingService.changeStatus(CONFIRMED)
+   └─ publishEvent(new BookingConfirmedEvent(id))      ← "something happened", no idea who listens
+         ... transaction commits ...
+   NotificationService.onBookingConfirmed(event)       ← @TransactionalEventListener(AFTER_COMMIT) + @Async
+         └─ build email → send (or log)
+```
+- **`ApplicationEventPublisher` / events** decouple the two services: `BookingService` doesn't depend on email at all. Adding an SMS later means one more listener, with no change to the booking code.
+- **`@TransactionalEventListener(phase = AFTER_COMMIT)`**: the listener runs only **after the database change is committed**. If saving failed and rolled back, no "your booking is confirmed" email goes out for a booking that isn't confirmed. A plain `@EventListener` would run immediately, *inside* the transaction.
+- **`@Async`** (enabled by `@EnableAsync` in `config/AsyncConfig.java`) runs the listener on a background thread (`task-1` in the log). The admin's click returns immediately (measured: 0.03 s) even if the mail server is slow. Exceptions in async code don't reach the caller, so `NotificationService` catches `MailException` and logs it. The booking stays confirmed; only the email failed.
+
+### `notification/NotificationService.java`
+- **`Optional<JavaMailSender>`**: Spring Boot only creates a `JavaMailSender` when `spring.mail.host` is set. Asking for an `Optional` means "give it to me if it exists". No mail server → the whole email is **written to the log**, so you can develop without an email account.
+- `SimpleMailMessage` is a plain-text email. HTML emails would use `MimeMessageHelper`.
+- No email address on the customer → skipped (logged).
+
+### Configuration: environment variables, not code
+Spring maps environment variables to properties automatically ("relaxed binding"): `SPRING_MAIL_HOST` becomes `spring.mail.host`. To send real email with **Gmail**:
+1. In your Google account, turn on 2-Step Verification, then create an **App Password** (Security → App passwords). Your normal password won't work.
+2. Start the backend with:
+```powershell
+$env:SPRING_MAIL_HOST="smtp.gmail.com"; $env:SPRING_MAIL_PORT="587"
+$env:SPRING_MAIL_USERNAME="you@gmail.com"; $env:SPRING_MAIL_PASSWORD="your16charapppassword"
+$env:SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH="true"; $env:SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE="true"
+$env:MAIL_FROM="you@gmail.com"
+.\mvnw.cmd spring-boot:run
+```
+- ⚠️ **Never commit passwords** to `application.properties`. Git history keeps them forever, even if deleted later. (The database password `crud` in that file is fine for a local-only database, but must become an environment variable before deploying.)
+- ⚠️ Don't put `spring.mail.host=${MAIL_HOST:}` in the properties file. An **empty** host still counts as "set", so Spring creates a mail sender that fails on every email.
+
+### How it was tested
+- **Unit tests:**
+  - `BookingServiceTest`: confirming publishes the event, cancelling doesn't.
+  - `NotificationServiceTest`: recipient, sender, subject and body (dates, "3 days", "PHP 10,500.00"); no email address → nothing sent; no mail server → no crash; mail server error → no crash. `ArgumentCaptor` grabs the message passed to the mock so its fields can be checked.
+- **Live, without mail configured:** the email text appeared in the backend log after Confirm.
+- **Live, with a fake SMTP server** (a small Node script on port 2525, run with `SPRING_MAIL_HOST=localhost SPRING_MAIL_PORT=2525`): the real `JavaMailSender` delivered a proper email.
+
+### Ideas for later
+- Emails for other moments: "request received" (PENDING) and "cancelled".
+- An HTML version with the van photo.
+- SMS: same event, a second listener using an SMS provider's API (e.g. Semaphore in the Philippines).
+- If emails must never be lost (server restarts mid-send), save them in an "outbox" table and send from there.
