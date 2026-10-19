@@ -40,23 +40,23 @@ npx -p @angular/cli@19 ng new . --routing --style=scss --skip-tests
 
 ---
 
-## Phase 1 — Backend Foundation (mostly done)
+## Phase 1 — Backend Foundation (done)
 - [x] Spring Boot project setup (Maven, Java 25)
 - [x] PostgreSQL connection (`vanrentaldb`) configured in `application.properties`
 - [x] `Vehicle` entity — fields: `id`, `model`, `capacity`, `ratePerDay` (BigDecimal), `status` (enum: AVAILABLE/BOOKED/UNDER_MAINTENANCE), `photoUrl`
 - [x] `VehicleStatus` enum
 - [x] `VehicleRepository` (extends `JpaRepository`)
 - [x] `VehicleController` — full CRUD on `/api/vehicles` (GET all, GET by id, POST, PUT, DELETE)
-- [ ] Verify all endpoints work via Postman/browser (`http://localhost:8080/api/vehicles`)
-- [ ] **Commit:** `feat: initial backend with Vehicle CRUD API`
+- [x] Verify all endpoints work via Postman/browser (`http://localhost:8080/api/vehicles`)
+- [x] **Commit:** `feat: initial backend with Vehicle CRUD API`
 
-## Phase 2 — Angular Frontend Foundation
-- [ ] Generate Angular 19 project in `frontend/` (see Angular Version Note above — avoid creating a nested `frontend/frontend/` folder, use `ng new .`)
-- [ ] Set up basic routing structure
-- [ ] Create `VehicleService` — Angular service using `HttpClient` to call `/api/vehicles`
-- [ ] Create `VehicleListComponent` — fetches and displays all vehicles in a table/card layout
-- [ ] Handle CORS on the backend (Spring Boot needs to allow requests from `http://localhost:4200`)
-- [ ] **Commit:** `feat: Angular frontend displaying vehicle list from backend API`
+## Phase 2 — Angular Frontend Foundation (done)
+- [x] Generate Angular 19 project in `frontend/` (see Angular Version Note above — avoid creating a nested `frontend/frontend/` folder, use `ng new .`)
+- [x] Set up basic routing structure
+- [x] Create `VehicleService` — Angular service using `HttpClient` to call `/api/vehicles`
+- [x] Create `VehicleListComponent` — fetches and displays all vehicles in a table/card layout
+- [x] Handle CORS on the backend (Spring Boot needs to allow requests from `http://localhost:4200`)
+- [x] **Commit:** `feat: Angular frontend displaying vehicle list from backend API`
 
 ## Phase 3 — Customer & Booking Entities
 - [ ] `Customer` entity (name, contact number, email)

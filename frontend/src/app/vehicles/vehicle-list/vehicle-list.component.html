@@ -1,0 +1,34 @@
+<section class="vehicles">
+  <h1>Our Vans</h1>
+
+  @if (loading()) {
+    <p class="state">Loading vehicles…</p>
+  } @else if (error()) {
+    <div class="state error">
+      <p>{{ error() }}</p>
+      <button type="button" (click)="load()">Try again</button>
+    </div>
+  } @else if (vehicles().length === 0) {
+    <p class="state">No vehicles yet.</p>
+  } @else {
+    <div class="grid">
+      @for (vehicle of vehicles(); track vehicle.id) {
+        <article class="card">
+          @if (vehicle.photoUrl) {
+            <img [src]="vehicle.photoUrl" [alt]="vehicle.model" />
+          } @else {
+            <div class="photo-placeholder">No photo</div>
+          }
+          <div class="body">
+            <h2>{{ vehicle.model }}</h2>
+            <p>Seats: {{ vehicle.capacity }}</p>
+            <p class="rate">{{ vehicle.ratePerDay | currency: 'PHP' : 'symbol' : '1.0-2' }} / day</p>
+            <span class="badge" [class]="'badge ' + vehicle.status.toLowerCase()">
+              {{ statusLabels[vehicle.status] }}
+            </span>
+          </div>
+        </article>
+      }
+    </div>
+  }
+</section>
