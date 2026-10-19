@@ -1,11 +1,45 @@
-Van Rental System — Getting Started Plan
-How we'll split the work
-Planning and design happen here in chat — entity design, schema decisions, the "why" behind each choice. Actual coding happens in Claude Code, a separate tool that runs in the terminal and edits files directly in the project folder. Decisions made here get carried over and implemented there.
-First steps (before touching Claude Code)
-1. Verify PostgreSQL install — open pgAdmin, or run psql --version in a terminal.
-2. Set up the Git repo — create a parent folder (e.g. van-rental-system) with backend/ (Spring Boot) and frontend/ (Angular) subfolders, then git init.
-3. Finalize the database schema — nail down the entities and relationships before any code is written, so Claude Code can move fast and accurately once we start building.
-Once the schema is settled, that's the hand-off point: bring the finalized design into Claude Code to generate the actual Entity classes, controllers, and Angular components.
-Open questions to finalize the schema
-[ ] Who uses the system — public customers booking online themselves, or staff logging bookings internally (digital record-keeping, not self-service)?
-[ ] Pricing model — fixed rate per van per day, or does it vary by purpose or distance?
+# Van Rental System
+
+An online booking system for a small van rental business: **2× Mitsubishi L300 FB** (16 seats, family and company trips) and **1× Hyundai H100** (cargo). Built as a learning project with **Spring Boot**, **Angular** and **PostgreSQL**.
+
+## Features
+
+**Customers**
+- Browse the vans with photos, seats and daily rates
+- Sign in with **Google**, then book: pick a van and dates with **live availability**, add a pickup pin on a map
+- Pay a **₱500 down payment** by scanning a GCash / InstaPay QR code and upload the screenshot
+- Get **emails** when the booking is received, if the payment needs checking, and when it's confirmed
+- **My bookings** page; each booking has a private reference code (e.g. `VR-7K3P9QXA`)
+
+**Admin**
+- Username/password login (same sign-in page as customers)
+- Bookings table with filters; view the payment screenshot, **verify or reject** it, then confirm, complete or cancel
+- Edit vans (rate, status, photo)
+- **Reports**: revenue per month, most-booked van, per-van totals
+
+## Tech stack
+
+| Part | Technology |
+|---|---|
+| Backend | Java 25, Spring Boot 4 (Web MVC, Data JPA, Security + JWT, Validation, Mail), Maven wrapper |
+| Frontend | Angular 19 (standalone components, signals, reactive forms), Leaflet + OpenStreetMap |
+| Database | PostgreSQL |
+| Auth | Google Identity Services (customers), username/password + JWT (admin) |
+
+## Project layout
+
+```
+backend/backend/   Spring Boot API (http://localhost:8080/api)
+frontend/          Angular app   (http://localhost:4200)
+van-img/           Original van photos and payment QR code
+LEARNING_NOTES.md  What was built in each phase, why, and the concepts behind it
+PROJECT_PLAN.md    The phase-by-phase plan and progress
+```
+
+## Running it locally
+
+See **[QUICK_START.md](QUICK_START.md)**.
+
+## Learning notes
+
+[LEARNING_NOTES.md](LEARNING_NOTES.md) explains every part of the system: layers, JPA relationships, the double-booking check, JWT security, Google sign-in, file uploads, events and emails, reports, and the UI design system.

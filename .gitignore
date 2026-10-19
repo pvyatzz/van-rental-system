@@ -1,0 +1,43 @@
+# =============================================================
+#  Files that should never be committed (applies to the whole repo)
+#  backend/backend/.gitignore and frontend/.gitignore add more rules
+# =============================================================
+
+# ---- Private settings & secrets ----
+secrets.properties
+.env
+.env.*
+*.pem
+*.key
+
+# ---- IDE / editor settings (personal, differ per computer) ----
+.idea/
+*.iml
+*.iws
+*.ipr
+.vscode/*
+# ...except the shared Angular recommendations in frontend/.vscode
+!frontend/.vscode/
+!frontend/.vscode/extensions.json
+!frontend/.vscode/launch.json
+!frontend/.vscode/tasks.json
+*.swp
+*~
+
+# ---- Build output & dependencies (re-created by mvnw / npm install) ----
+target/
+node_modules/
+dist/
+.angular/
+out-tsc/
+
+# ---- Logs & temporary files ----
+*.log
+logs/
+tmp/
+*.tmp
+
+# ---- Operating system files ----
+.DS_Store
+Thumbs.db
+desktop.ini
