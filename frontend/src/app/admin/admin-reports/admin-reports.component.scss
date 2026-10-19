@@ -1,0 +1,279 @@
+// Chart tokens: one validated data color (blue 450) + a lighter step for hover, recessive grid
+$bar: #2a78d6;
+$bar-hover: #3987e5;
+$grid: #eceef1;
+$ink: #1d1d1f;
+$ink-2: #555;
+$ink-3: #777;
+
+.year-switch {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 16px;
+
+  button {
+    width: 34px;
+    height: 34px;
+    border: 1px solid #c9ccd1;
+    border-radius: 6px;
+    background: #fff;
+    font-size: 1.2rem;
+    line-height: 1;
+    cursor: pointer;
+
+    &:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+  }
+
+  strong {
+    font-size: 1.2rem;
+    min-width: 3.2em;
+    text-align: center;
+  }
+
+  .hint {
+    color: $ink-3;
+    font-size: 0.85rem;
+  }
+}
+
+.alert {
+  background: #fde8e7;
+  color: #b3261e;
+  padding: 10px 12px;
+  border-radius: 6px;
+}
+
+.muted {
+  color: $ink-3;
+}
+
+// Refetch keeps the frame: dim the old numbers instead of flashing a spinner
+.content {
+  transition: opacity 0.15s;
+
+  &.reloading {
+    opacity: 0.5;
+  }
+}
+
+// ---- KPI tiles ----
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.tile {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: #fff;
+  border: 1px solid #e3e3e3;
+  border-radius: 10px;
+  padding: 14px 16px;
+
+  .label {
+    color: $ink-2;
+    font-size: 0.85rem;
+  }
+
+  .value {
+    font-size: 1.6rem;
+    font-weight: 600;
+    color: $ink;
+
+    &.small {
+      font-size: 1.05rem;
+      line-height: 1.4;
+    }
+  }
+
+  .sub {
+    color: $ink-3;
+    font-size: 0.8rem;
+  }
+}
+
+// ---- Cards ----
+.card {
+  background: #fff;
+  border: 1px solid #e3e3e3;
+  border-radius: 10px;
+  padding: 16px;
+  margin-bottom: 16px;
+
+  h2 {
+    font-size: 1.05rem;
+    margin: 0 0 12px;
+  }
+}
+
+.card-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.link {
+  background: none;
+  border: 0;
+  color: #1f3b57;
+  text-decoration: underline;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.9rem;
+  padding: 0;
+}
+
+// ---- Column chart (HTML + CSS, so text stays readable at any width) ----
+$axis-width: 52px;
+
+.chart {
+  padding-top: 18px; // room for the peak label
+}
+
+.plot {
+  position: relative;
+  height: 220px;
+  margin-left: $axis-width;
+}
+
+.gridline {
+  position: absolute;
+  left: 0;
+  right: 0;
+  border-top: 1px solid $grid; // hairline, solid, recessive
+
+  .tick {
+    position: absolute;
+    right: calc(100% + 8px);
+    transform: translateY(-50%);
+    color: $ink-3;
+    font-size: 0.75rem;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+}
+
+.columns {
+  position: absolute;
+  inset: 0;
+  display: flex;
+}
+
+.col {
+  position: relative;
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  outline: none;
+  cursor: default;
+
+  // keyboard focus ring on the whole column (the hit target)
+  &:focus-visible {
+    box-shadow: inset 0 0 0 2px #1f3b57;
+    border-radius: 4px;
+  }
+
+  &.active .bar {
+    background: $bar-hover;
+  }
+}
+
+.bar {
+  width: 60%;
+  max-width: 24px; // thin marks: never fill the slot
+  min-height: 2px;
+  background: $bar;
+  border-radius: 4px 4px 0 0; // rounded data end, square at the baseline
+}
+
+.peak {
+  position: absolute;
+  left: 50%;
+  transform: translate(-50%, -4px);
+  color: $ink-2; // text uses text colors, never the bar color
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.tooltip {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 150px;
+  padding: 8px 10px;
+  background: #fff;
+  border: 1px solid #d9dce1;
+  border-radius: 8px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+  font-size: 0.8rem;
+  color: $ink-2;
+  pointer-events: none;
+  transform: translateX(-30%);
+
+  &.left {
+    transform: translateX(-85%); // keep the tooltip inside the card near the right edge
+  }
+
+  strong {
+    color: $ink; // value leads, label follows
+    font-size: 0.95rem;
+  }
+}
+
+.months {
+  display: flex;
+  margin-left: $axis-width;
+  margin-top: 6px;
+
+  span {
+    flex: 1;
+    text-align: center;
+    color: $ink-3;
+    font-size: 0.72rem;
+  }
+}
+
+// ---- Tables ----
+.table-wrap {
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.92rem;
+}
+
+th,
+td {
+  text-align: left;
+  padding: 8px 10px;
+  border-bottom: 1px solid #eef0f2;
+}
+
+th {
+  color: #444;
+  font-weight: 600;
+  background: #f7f8fa;
+}
+
+.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}

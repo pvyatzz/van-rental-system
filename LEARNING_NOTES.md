@@ -546,3 +546,61 @@ $env:MAIL_FROM="you@gmail.com"
 - An HTML version with the van photo.
 - SMS: same event, a second listener using an SMS provider's API (e.g. Semaphore in the Philippines).
 - If emails must never be lost (server restarts mid-send), save them in an "outbox" table and send from there.
+
+---
+
+## Phase 6.3: Reports
+
+**Admin → Reports**: pick a year and see:
+- 4 tiles: revenue, bookings, pending, most booked van
+- a revenue-per-month column chart, which can switch to a table
+- a per-van table
+
+### What counts as what (`dto/ReportResponse.java`)
+| Number | Means |
+|---|---|
+| **Revenue** | total of `CONFIRMED` + `COMPLETED` bookings: money you can count on |
+| **Pending** | total of `PENDING` bookings: possible, not yet confirmed |
+| **Bookings** | count of bookings that aren't cancelled (cancelled ones are counted separately) |
+| **Month** | a booking counts in the month it **starts** (a 30 Jan–2 Feb trip is January) |
+
+Writing these definitions down matters as much as the code: "revenue" means different things to different people.
+
+### Backend: `service/ReportService.java`
+- Loads one year of bookings (`findByStartDateBetween`, a **derived query**: Spring writes the SQL from the method name) and groups them with **Java streams**:
+  - `filter(...)` keeps some, `count()` counts them;
+  - `map(Booking::getTotalPrice).reduce(BigDecimal.ZERO, BigDecimal::add)` adds up money ("start at 0, add each price");
+  - `IntStream.rangeClosed(1, 12)` makes **all 12 months**, even empty ones, so the chart never has missing bars.
+- `Predicate<Booking>` constants (`EARNING`, `PENDING`, `NOT_CANCELLED`) name each rule once and reuse it everywhere.
+- **Streams vs SQL:** for hundreds of bookings, Java is simple and fast enough. For many thousands, let the database do it (`SELECT month, SUM(total_price) ... GROUP BY month`) so you don't load every row.
+- `GET /api/reports/yearly?year=2027` is admin-only automatically, because `SecurityConfig` protects everything not listed as public.
+- `ReportServiceTest` checks the math with numbers you can verify by hand.
+
+### Frontend: `admin/admin-reports/`
+- **`toObservable(this.year)`** turns the year *signal* into a stream, so the same `switchMap` reload pattern works when you click ‹ or ›.
+- **Refetch keeps the frame:** while a new year loads, the old numbers stay on screen at half opacity instead of flashing a "Loading…" text.
+
+### Chart design rules used (from a data-visualization checklist)
+- **The right form for the job:** single headline numbers are **tiles**, not charts. "Revenue over 12 months" is one series, so it gets **columns in one color** and needs **no legend** (the title says what it is).
+- **The color was checked, not guessed:** the app's dark navy `#1f3b57` *failed* a palette validator (too dark and grayish for data marks). The chart uses blue `#2a78d6`, which passes, plus a lighter blue on hover.
+- **Thin marks:** columns at most 24px wide, rounded at the top, square at the baseline. Gridlines are 1px, light and solid.
+- **Clean axis numbers:** `niceTicks()` picks a step of 1, 2, 2.5 or 5 × a power of ten, then stops at the first tick above the data (max ₱28,000 → step ₱10K → 0, 10K, 20K, 30K). The first version rounded the *top* instead (28K → 50K), which made every bar look short.
+- **Label sparingly:** only the best month shows its value. The rest is in the tooltip and table. Text is gray "ink", never the bar color.
+- **Tooltip on hover *and* keyboard focus** (`tabindex="0"`, `aria-label` on each column). The whole column is the hover target, not just the thin bar.
+- **"Show as table"** gives every exact number without hovering (accessibility, and handy for copying).
+- Built with plain HTML/CSS (`height: x%` divs) instead of SVG, so text stays readable on a phone instead of shrinking with the drawing.
+- `font-variant-numeric: tabular-nums` on table numbers makes digits equal width, so columns of numbers line up.
+
+### Gotcha, properly explained: the stale error overlay
+This happened in Phase 5 and again here. The real cause: making a change with **two separate edits** (remove `niceMax`, then update the code that used it). The dev server compiled in the split second between them, hit "Cannot find name 'niceMax'", and **kept showing that overlay even after the next build succeeded**, even in newly opened tabs.
+- **How to tell:** `ng build` passes, but the browser shows an error. The `ng serve` terminal shows "generation failed" followed later by "complete".
+- **Fix:** stop `ng serve` (Ctrl+C) and start it again. (In Phase 5 a leftover old server on port 4200 made it worse; check the port as described there.)
+
+### How it was tested
+- `ReportServiceTest` (2 tests): totals, months, per van, an empty year.
+- 10 sample bookings in 2027 (mixed statuses, one cancelled): the API answered revenue ₱90,500 and pending ₱14,000, matching a hand calculation. Without a token: 401. Year 1990: 400.
+- Browser (11 checks): login returns to Reports; tiles; 12 columns / 6 bars (May has only a *pending* booking, so no revenue bar, which is correct); one label; axis ₱0–₱30K; hover tooltip; keyboard-focus tooltip; table view; per-van order; no sideways scroll on a phone.
+
+### Ideas for later
+- Compare with last year ("+12% vs 2026"), and occupancy % per van (days booked ÷ days in the year).
+- Export to CSV for your accountant.

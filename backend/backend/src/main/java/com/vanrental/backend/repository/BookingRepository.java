@@ -45,4 +45,8 @@ public interface BookingRepository extends JpaRepository<Booking, Long>, JpaSpec
     Optional<Booking> findWithDetailsByReference(String reference);
 
     List<Booking> findByReferenceIsNull();
+
+    // Derived query: Spring builds "WHERE start_date BETWEEN ?1 AND ?2" from the method name
+    @EntityGraph(attributePaths = {"vehicle"})
+    List<Booking> findByStartDateBetween(LocalDate from, LocalDate to);
 }

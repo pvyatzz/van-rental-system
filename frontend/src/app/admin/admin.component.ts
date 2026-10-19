@@ -11,6 +11,7 @@ import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
       <nav class="tabs">
         <a routerLink="bookings" routerLinkActive="active">Bookings</a>
         <a routerLink="vehicles" routerLinkActive="active">Vans</a>
+        <a routerLink="reports" routerLinkActive="active">Reports</a>
       </nav>
       <router-outlet />
     </section>

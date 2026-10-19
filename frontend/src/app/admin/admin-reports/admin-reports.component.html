@@ -1,0 +1,133 @@
+<!-- Filter row: one row, above everything it controls -->
+<div class="year-switch">
+  <button type="button" (click)="changeYear(-1)" aria-label="Previous year">‹</button>
+  <strong>{{ year() }}</strong>
+  <button type="button" (click)="changeYear(1)" aria-label="Next year" [disabled]="year() >= currentYear + 1">›</button>
+  <span class="hint">Bookings count in the month they start.</span>
+</div>
+
+@if (error()) {
+  <p class="alert" role="alert">{{ error() }}</p>
+}
+
+@if (report(); as r) {
+  <div class="content" [class.reloading]="loading()">
+    <!-- KPI row -->
+    <div class="tiles">
+      <div class="tile">
+        <span class="label">Revenue</span>
+        <span class="value">{{ r.totals.revenue | currency: 'PHP' : 'symbol' : '1.0-0' }}</span>
+        <span class="sub">confirmed + completed</span>
+      </div>
+      <div class="tile">
+        <span class="label">Bookings</span>
+        <span class="value">{{ r.totals.bookings }}</span>
+        <span class="sub">{{ r.totals.cancelled }} cancelled (not counted)</span>
+      </div>
+      <div class="tile">
+        <span class="label">Pending</span>
+        <span class="value">{{ r.totals.pendingValue | currency: 'PHP' : 'symbol' : '1.0-0' }}</span>
+        <span class="sub">waiting for confirmation</span>
+      </div>
+      <div class="tile">
+        <span class="label">Most booked van</span>
+        <span class="value small">{{ r.totals.mostBookedVehicle ?? '—' }}</span>
+      </div>
+    </div>
+
+    <!-- Monthly revenue chart -->
+    <section class="card">
+      <div class="card-head">
+        <h2>Revenue per month</h2>
+        <button type="button" class="link" (click)="showTable.set(!showTable())">
+          {{ showTable() ? 'Show chart' : 'Show as table' }}
+        </button>
+      </div>
+
+      @if (!showTable()) {
+        <div class="chart" (pointerleave)="hovered.set(null)">
+          <div class="plot">
+            <!-- gridlines + y-axis labels -->
+            @for (tick of ticks(); track $index) {
+              <div class="gridline" [style.bottom.%]="(tick / axisMax()) * 100">
+                <span class="tick">{{ compact(tick) }}</span>
+              </div>
+            }
+            <!-- one column per month; the whole column is the hover/focus target -->
+            <div class="columns">
+              @for (m of r.months; track m.month; let i = $index) {
+                <div class="col" tabindex="0" role="img" [attr.aria-label]="barLabel(m, i)"
+                     [class.active]="hovered() === i"
+                     (pointerenter)="hovered.set(i)" (focus)="hovered.set(i)" (blur)="hovered.set(null)">
+                  @if (i === peakIndex()) {
+                    <span class="peak" [style.bottom.%]="barHeight(m)">{{ compact(m.revenue) }}</span>
+                  }
+                  @if (m.revenue > 0) {
+                    <div class="bar" [style.height.%]="barHeight(m)"></div>
+                  }
+                  @if (hovered() === i) {
+                    <div class="tooltip" [class.left]="i >= 8">
+                      <strong>{{ m.revenue | currency: 'PHP' : 'symbol' : '1.0-0' }}</strong>
+                      <span>{{ monthNames[i] }} {{ year() }} · revenue</span>
+                      <span>{{ m.bookings }} {{ m.bookings === 1 ? 'booking' : 'bookings' }}</span>
+                      @if (m.pendingValue > 0) {
+                        <span>+ {{ m.pendingValue | currency: 'PHP' : 'symbol' : '1.0-0' }} pending</span>
+                      }
+                    </div>
+                  }
+                </div>
+              }
+            </div>
+          </div>
+          <div class="months">
+            @for (name of monthNames; track name) {
+              <span>{{ name }}</span>
+            }
+          </div>
+        </div>
+      } @else {
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>Month</th><th class="num">Bookings</th><th class="num">Revenue</th><th class="num">Pending</th></tr>
+            </thead>
+            <tbody>
+              @for (m of r.months; track m.month; let i = $index) {
+                <tr>
+                  <td>{{ monthNames[i] }}</td>
+                  <td class="num">{{ m.bookings }}</td>
+                  <td class="num">{{ m.revenue | currency: 'PHP' : 'symbol' : '1.0-0' }}</td>
+                  <td class="num">{{ m.pendingValue | currency: 'PHP' : 'symbol' : '1.0-0' }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </section>
+
+    <!-- Per van -->
+    <section class="card">
+      <h2>Per van</h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Van</th><th class="num">Bookings</th><th class="num">Rental days</th><th class="num">Revenue</th></tr>
+          </thead>
+          <tbody>
+            @for (v of r.vehicles; track v.vehicleId) {
+              <tr>
+                <td>{{ v.model }} <span class="muted">#{{ v.vehicleId }}</span></td>
+                <td class="num">{{ v.bookings }}</td>
+                <td class="num">{{ v.rentalDays }}</td>
+                <td class="num">{{ v.revenue | currency: 'PHP' : 'symbol' : '1.0-0' }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+} @else if (loading()) {
+  <p class="muted">Loading report…</p>
+}
