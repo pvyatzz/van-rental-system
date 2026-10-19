@@ -19,6 +19,9 @@ public record BookingResponse(
         LocalDate startDate,
         LocalDate endDate,
         String purpose,
+        String pickupAddress,
+        Double pickupLatitude,
+        Double pickupLongitude,
         BookingStatus status,
         BigDecimal totalPrice,
         Instant createdAt
@@ -35,6 +38,9 @@ public record BookingResponse(
                 booking.getStartDate(),
                 booking.getEndDate(),
                 booking.getPurpose(),
+                booking.getPickupAddress(),
+                booking.getPickupLatitude(),
+                booking.getPickupLongitude(),
                 booking.getStatus(),
                 booking.getTotalPrice(),
                 booking.getCreatedAt()

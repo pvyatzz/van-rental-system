@@ -88,6 +88,14 @@ public class NotificationService {
                 .append("Return:    ").append(DATE.format(booking.getEndDate()))
                 .append(" (").append(days).append(days == 1 ? " day" : " days").append(")\n")
                 .append("Total:     PHP ").append(String.format(Locale.ENGLISH, "%,.2f", booking.getTotalPrice())).append('\n');
+        if (booking.getPickupAddress() != null) {
+            body.append("Pickup:    ").append(booking.getPickupAddress()).append('\n');
+        }
+        if (booking.getPickupLatitude() != null && booking.getPickupLongitude() != null) {
+            // A plain Google Maps link: works on any phone, no API key needed
+            body.append("Map:       https://www.google.com/maps?q=")
+                    .append(booking.getPickupLatitude()).append(',').append(booking.getPickupLongitude()).append('\n');
+        }
         body.append("\nIf you need to change anything, just reply to this email.\n\n")
                 .append("Thank you,\n").append(businessName).append('\n');
 

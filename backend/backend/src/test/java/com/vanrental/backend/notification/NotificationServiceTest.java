@@ -69,6 +69,18 @@ class NotificationServiceTest {
     }
 
     @Test
+    void includesPickupAddressAndMapLink() {
+        booking.setPickupAddress("SM Megamall, Ortigas");
+        booking.setPickupLatitude(14.5849);
+        booking.setPickupLongitude(121.0563);
+
+        String text = service(Optional.of(mailSender)).buildConfirmation(booking).getText();
+
+        assertThat(text).contains("Pickup:    SM Megamall, Ortigas")
+                .contains("https://www.google.com/maps?q=14.5849,121.0563");
+    }
+
+    @Test
     void customerWithoutEmailGetsNothing() {
         booking.getCustomer().setEmail(null);
         service(Optional.of(mailSender)).sendConfirmation(booking);

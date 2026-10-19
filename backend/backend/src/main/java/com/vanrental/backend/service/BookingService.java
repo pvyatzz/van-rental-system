@@ -88,18 +88,14 @@ public class BookingService {
     @Transactional
     public BookingResponse create(BookingRequest request) {
         validateDates(request.startDate(), request.endDate());
+        validatePickup(request);
         Vehicle vehicle = lockVehicle(request.vehicleId());
         Customer customer = getCustomer(request.customerId());
         ensureBookable(vehicle, request.startDate(), request.endDate(), null);
 
         Booking booking = new Booking();
-        booking.setVehicle(vehicle);
-        booking.setCustomer(customer);
-        booking.setStartDate(request.startDate());
-        booking.setEndDate(request.endDate());
-        booking.setPurpose(request.purpose());
+        applyRequest(booking, request, vehicle, customer);
         booking.setStatus(BookingStatus.PENDING);
-        booking.setTotalPrice(calculatePrice(vehicle.getRatePerDay(), request.startDate(), request.endDate()));
         return BookingResponse.from(bookingRepository.save(booking));
     }
 
@@ -110,18 +106,35 @@ public class BookingService {
             throw new InvalidRequestException("A " + booking.getStatus() + " booking can no longer be changed");
         }
         validateDates(request.startDate(), request.endDate());
+        validatePickup(request);
         Vehicle vehicle = lockVehicle(request.vehicleId());
         Customer customer = getCustomer(request.customerId());
         // exclude this booking itself, otherwise it would "overlap" with its own old dates
         ensureBookable(vehicle, request.startDate(), request.endDate(), booking.getId());
 
+        applyRequest(booking, request, vehicle, customer);
+        return BookingResponse.from(booking); // managed entity: changes are saved on commit
+    }
+
+    /** Copies the client's fields onto the booking and recalculates the price (shared by create and update). */
+    private void applyRequest(Booking booking, BookingRequest request, Vehicle vehicle, Customer customer) {
         booking.setVehicle(vehicle);
         booking.setCustomer(customer);
         booking.setStartDate(request.startDate());
         booking.setEndDate(request.endDate());
         booking.setPurpose(request.purpose());
+        booking.setPickupAddress(request.pickupAddress() == null || request.pickupAddress().isBlank()
+                ? null : request.pickupAddress().trim());
+        booking.setPickupLatitude(request.pickupLatitude());
+        booking.setPickupLongitude(request.pickupLongitude());
         booking.setTotalPrice(calculatePrice(vehicle.getRatePerDay(), request.startDate(), request.endDate()));
-        return BookingResponse.from(booking); // managed entity: changes are saved on commit
+    }
+
+    /** A map pin needs both numbers: latitude without longitude (or the other way round) is not a place. */
+    private void validatePickup(BookingRequest request) {
+        if ((request.pickupLatitude() == null) != (request.pickupLongitude() == null)) {
+            throw new InvalidRequestException("Pickup latitude and longitude must be given together");
+        }
     }
 
     @Transactional

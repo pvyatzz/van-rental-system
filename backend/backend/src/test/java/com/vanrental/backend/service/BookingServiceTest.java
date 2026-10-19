@@ -79,7 +79,7 @@ class BookingServiceTest {
         when(bookingRepository.findOverlapping(1L, start, end)).thenReturn(List.of());
         when(bookingRepository.save(any(Booking.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        BookingResponse result = bookingService.create(new BookingRequest(1L, 10L, start, end, "Family outing"));
+        BookingResponse result = bookingService.create(new BookingRequest(1L, 10L, start, end, "Family outing", null, null, null));
 
         assertThat(result.status()).isEqualTo(BookingStatus.PENDING);
         assertThat(result.totalPrice()).isEqualByComparingTo("10500.00");
@@ -93,7 +93,7 @@ class BookingServiceTest {
         when(customerRepository.findById(10L)).thenReturn(Optional.of(customer));
         when(bookingRepository.findOverlapping(1L, start, end)).thenReturn(List.of(existing));
 
-        assertThatThrownBy(() -> bookingService.create(new BookingRequest(1L, 10L, start, end, null)))
+        assertThatThrownBy(() -> bookingService.create(new BookingRequest(1L, 10L, start, end, null, null, null, null)))
                 .isInstanceOf(BookingConflictException.class)
                 .hasMessageContaining("booking #99");
         verify(bookingRepository, never()).save(any());
@@ -105,14 +105,14 @@ class BookingServiceTest {
         when(vehicleRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(van));
         when(customerRepository.findById(10L)).thenReturn(Optional.of(customer));
 
-        assertThatThrownBy(() -> bookingService.create(new BookingRequest(1L, 10L, start, end, null)))
+        assertThatThrownBy(() -> bookingService.create(new BookingRequest(1L, 10L, start, end, null, null, null, null)))
                 .isInstanceOf(BookingConflictException.class)
                 .hasMessageContaining("maintenance");
     }
 
     @Test
     void createRejectsEndDateBeforeStartDate() {
-        assertThatThrownBy(() -> bookingService.create(new BookingRequest(1L, 10L, end, start, null)))
+        assertThatThrownBy(() -> bookingService.create(new BookingRequest(1L, 10L, end, start, null, null, null, null)))
                 .isInstanceOf(InvalidRequestException.class);
     }
 
@@ -125,7 +125,7 @@ class BookingServiceTest {
         LocalDate newEnd = end.plusDays(1);
         when(bookingRepository.findOverlapping(1L, start, newEnd)).thenReturn(List.of(own));
 
-        BookingResponse result = bookingService.update(5L, new BookingRequest(1L, 10L, start, newEnd, null));
+        BookingResponse result = bookingService.update(5L, new BookingRequest(1L, 10L, start, newEnd, null, null, null, null));
 
         assertThat(result.endDate()).isEqualTo(newEnd);
         assertThat(result.totalPrice()).isEqualByComparingTo("14000.00");
@@ -138,6 +138,29 @@ class BookingServiceTest {
 
         assertThatThrownBy(() -> bookingService.changeStatus(5L, BookingStatus.CONFIRMED))
                 .isInstanceOf(InvalidRequestException.class);
+    }
+
+    @Test
+    void createStoresThePickupLocation() {
+        when(vehicleRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(van));
+        when(customerRepository.findById(10L)).thenReturn(Optional.of(customer));
+        when(bookingRepository.findOverlapping(1L, start, end)).thenReturn(List.of());
+        when(bookingRepository.save(any(Booking.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        BookingResponse result = bookingService.create(
+                new BookingRequest(1L, 10L, start, end, null, "  SM Megamall, Ortigas  ", 14.5849, 121.0563));
+
+        assertThat(result.pickupAddress()).isEqualTo("SM Megamall, Ortigas"); // trimmed
+        assertThat(result.pickupLatitude()).isEqualTo(14.5849);
+        assertThat(result.pickupLongitude()).isEqualTo(121.0563);
+    }
+
+    @Test
+    void pickupLatitudeWithoutLongitudeIsRejected() {
+        assertThatThrownBy(() -> bookingService.create(
+                new BookingRequest(1L, 10L, start, end, null, null, 14.5849, null)))
+                .isInstanceOf(InvalidRequestException.class)
+                .hasMessageContaining("together");
     }
 
     @Test

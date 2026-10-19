@@ -46,6 +46,16 @@ public class Booking {
 
     private String purpose;
 
+    // Optional pickup location: an address the customer types, and/or a pin on the map
+    @Column(name = "pickup_address")
+    private String pickupAddress;
+
+    @Column(name = "pickup_latitude")
+    private Double pickupLatitude;
+
+    @Column(name = "pickup_longitude")
+    private Double pickupLongitude;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private BookingStatus status;

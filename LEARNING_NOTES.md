@@ -604,3 +604,58 @@ This happened in Phase 5 and again here. The real cause: making a change with **
 ### Ideas for later
 - Compare with last year ("+12% vs 2026"), and occupancy % per van (days booked ÷ days in the year).
 - Export to CSV for your accountant.
+
+---
+
+## Phase 6.4: Pickup location map
+
+The booking form has an optional **Pickup location** section:
+- an address or landmark field;
+- a map where the customer taps to drop a pin, or presses **Use my location** on a phone.
+
+The confirmation page and the admin table show the address and a **Google Maps link** to the pin, for the driver.
+
+### Why OpenStreetMap + Leaflet instead of Google Maps
+- The Google Maps *JavaScript API* (an embedded interactive map) needs an API key with **billing** enabled.
+- **Leaflet** (an open-source map library) + **OpenStreetMap** tiles is free with no key. The one rule: show the "© OpenStreetMap contributors" credit on the map (Leaflet does).
+- Plain Google Maps **links** (`https://www.google.com/maps?q=lat,lng`) need no key at all. They just open Google Maps on the driver's phone, so you get the best of both (`shared/maps.ts`).
+- ⚠️ OpenStreetMap's free tile server is for light use. A busy public site should use a tile provider (MapTiler, Stadia, etc.) with its own free tier.
+
+### Backend
+- `Booking` gets `pickupAddress`, `pickupLatitude`, `pickupLongitude` (all optional). `ddl-auto=update` added the columns.
+- `BookingRequest` validation: `@DecimalMin("-90") @DecimalMax("90")` for latitude, ±180 for longitude. **Cross-field rule** in `BookingService.validatePickup`: latitude and longitude must come **together**. One field's annotations can't see another field, so that check lives in the service.
+- Small refactor: `create` and `update` used to copy the same fields twice. Now both call `applyRequest(...)`, one place to change when a field is added (as happened right here).
+- The confirmation email includes the pickup address and the map link.
+
+### Frontend: `shared/pickup-map/pickup-map.component.ts`
+- **Installing a library:** `npm install leaflet@1.9.4` + `npm install -D @types/leaflet` (TypeScript type definitions, so `L.map(...)` gets autocomplete and type checks).
+- **Leaflet's CSS** goes in `angular.json` → `styles`. Component styles are *scoped* to the component's own template, and Leaflet creates its HTML at runtime, so scoped styles would never reach it.
+- `allowedCommonJsDependencies: ["leaflet"]`: Leaflet is an older CommonJS package, so Angular warns it can't optimize it fully. Listing it acknowledges that on purpose.
+- **Using a non-Angular library inside Angular:**
+  - create it in `ngAfterViewInit` (the `<div>` exists only after the view is built) and **destroy it in `ngOnDestroy`** (`map.remove()`), or its listeners leak every time you leave the page;
+  - `viewChild.required('mapElement')` gets the `<div>` (a signal-based `@ViewChild`).
+- **`NgZone.runOutsideAngular`:** Angular (with zone.js) re-checks the page after *every* browser event. Leaflet produces hundreds (every mouse move over the map). Creating the map outside the zone stops that, and `zone.run(...)` steps back in only when something matters (a pin was placed), so the form updates.
+- **`L.circleMarker`** instead of the default pin icon: the default marker needs image files that bundlers often can't find (a famous Leaflet + bundler gotcha, broken-image pins). A circle is drawn as a vector, so no images are needed.
+- `output<PickupPoint | null>()` (the signal-era `@Output`) sends the pin to the booking form, which `patchValue`s it into the `pickup` form group.
+- **"Use my location"** uses the browser's `navigator.geolocation`. It only works on **https** or `localhost`, and the user must allow it. If refused, a friendly message suggests tapping the map instead.
+- Coordinates are rounded to 6 decimals (about 10 cm), more precise than any phone GPS.
+- **Accessibility:** clicking a map isn't possible with a keyboard or screen reader, which is why the **address field** exists and both are optional.
+
+### Gotchas hit while building
+- **`ClassFormatError: Invalid method Code length 0`** when running the tests. VS Code's Java extension compiles into the **same `target/classes` folder** as Maven. If it compiles while the code has an error (mid-edit), it writes a broken placeholder `.class` file, and Maven thinks it's up to date. Fix: **`.\mvnw.cmd clean test`** (`clean` deletes `target/` and compiles everything fresh).
+- In my browser-test scripts, `\s` inside a JavaScript **template string** (`` `...` ``) silently becomes a plain `s` (an unknown escape), so a "remove whitespace" regex deleted every letter s. Test text showed "Van" for "Vans" and "Open in Google Map". It must be written `\\s` inside backticks. The app was fine; the test was wrong.
+
+### How it was tested
+- Unit tests: pickup fields stored and trimmed; latitude without longitude → 400; email includes pickup and map link (23 backend tests in total).
+- API: half coordinates → 400 "must be given together"; latitude 200 → 400.
+- Browser (10 checks): map tiles load with the credit; clicking the map places a pin near Manila; Remove pin; **Use my location** with an emulated GPS position (SM Megamall) → pin there; the booking saves the address; the confirmation links to `google.com/maps?q=14.5849,121.0563`; the admin row shows pickup + link; no sideways scroll on a phone.
+
+---
+
+## Before going online (deployment checklist)
+Everything so far runs on your computer. Before deploying (Render, Railway, a VPS):
+1. **Secrets out of the code:** the database password, `ADMIN_PASSWORD` and `JWT_SECRET` become environment variables on the server. Never use the `admin123` / dev secret defaults online.
+2. **`ddl-auto=update` → Flyway migrations**, so database changes are versioned scripts, not guesses at startup.
+3. **HTTPS** (most hosts do this for you). Required for login tokens and for "Use my location".
+4. `CORS_ALLOWED_ORIGINS` set to your real frontend address; `environment.ts` `apiUrl` pointing to the real backend (a separate `environment.prod.ts`).
+5. Rate-limit `/api/auth/login`; set up real SMTP (6.2); consider a paid map-tile provider if traffic grows.

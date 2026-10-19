@@ -80,7 +80,7 @@ npx -p @angular/cli@19 ng new . --routing --style=scss --skip-tests
 - [x] **Commit:** `feat: add admin dashboard for managing bookings and vehicles`
 
 ## Phase 6 — Polish & Extras (later, optional)
-- [ ] Authentication (admin login — Spring Security)
+- [ ] Authentication (admin login — Spring Security) - admin acc username: admin pass: admin123
 - [ ] Email/SMS notification on booking confirmation
 - [ ] Google Maps integration for pickup location
 - [ ] Reports (most-booked vehicle, monthly revenue estimate)
