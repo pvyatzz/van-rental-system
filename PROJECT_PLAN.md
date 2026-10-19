@@ -79,12 +79,14 @@ npx -p @angular/cli@19 ng new . --routing --style=scss --skip-tests
 - [x] Basic table with filters (by vehicle, by date range, by status)
 - [x] **Commit:** `feat: add admin dashboard for managing bookings and vehicles`
 
-## Phase 6 — Polish & Extras (later, optional)
-- [ ] Authentication (admin login — Spring Security) - admin acc username: admin pass: admin123
-- [ ] Email/SMS notification on booking confirmation
-- [ ] Google Maps integration for pickup location
-- [ ] Reports (most-booked vehicle, monthly revenue estimate)
-- [ ] Deployment (e.g. Render, Railway, or a VPS)
+## Phase 6 — Polish & Extras (mostly done)
+- [x] Authentication (admin login — Spring Security + JWT) - admin acc username: admin pass: admin123 (local dev defaults only — set ADMIN_PASSWORD before going online)
+- [x] Booking reference codes (VR-XXXXXXXX) instead of ids on the customer page
+- [x] Email notification on booking confirmation (logs the email until SMTP is configured — see LEARNING_NOTES 6.2)
+- [ ] SMS notification (same event, a second listener — needs an SMS provider account)
+- [x] Pickup location map (OpenStreetMap + Leaflet instead of Google Maps — no API key; Google Maps links for the driver)
+- [x] Reports (most-booked vehicle, monthly revenue, per-van table)
+- [ ] Deployment (e.g. Render, Railway, or a VPS) — see "Before going online" in LEARNING_NOTES.md
 
 ---
 
