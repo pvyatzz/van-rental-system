@@ -1,12 +1,13 @@
 import { CurrencyPipe } from '@angular/common';
 import { Component, OnInit, inject, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
 
 import { Vehicle, VehicleStatus } from '../../models/vehicle';
 import { VehicleService } from '../../services/vehicle.service';
 
 @Component({
   selector: 'app-vehicle-list',
-  imports: [CurrencyPipe],
+  imports: [CurrencyPipe, RouterLink],
   templateUrl: './vehicle-list.component.html',
   styleUrl: './vehicle-list.component.scss'
 })

@@ -1,0 +1,64 @@
+.page {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 24px 16px 48px;
+}
+
+.banner {
+  background: #e3f4e6;
+  color: #1e4d29;
+  border-radius: 10px;
+  padding: 16px 18px;
+  margin-bottom: 20px;
+
+  h1 {
+    margin: 0 0 6px;
+    font-size: 1.4rem;
+  }
+
+  p {
+    margin: 0;
+  }
+}
+
+.summary {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 10px 20px;
+  background: #fff;
+  border: 1px solid #e3e3e3;
+  border-radius: 10px;
+  padding: 16px 18px;
+  margin: 0 0 20px;
+
+  dt {
+    color: #666;
+  }
+
+  dd {
+    margin: 0;
+  }
+
+  .total {
+    font-weight: 700;
+    font-size: 1.1rem;
+  }
+}
+
+.badge {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  background: #fdecd6;
+  color: #8a4b00;
+
+  &[data-status='CONFIRMED'] {
+    background: #e3f4e6;
+    color: #1e6b2e;
+  }
+}
+
+.error {
+  color: #b3261e;
+}

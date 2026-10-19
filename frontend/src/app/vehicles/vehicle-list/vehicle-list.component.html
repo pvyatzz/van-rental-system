@@ -26,6 +26,11 @@
             <span class="badge" [class]="'badge ' + vehicle.status.toLowerCase()">
               {{ statusLabels[vehicle.status] }}
             </span>
+            @if (vehicle.status === 'UNDER_MAINTENANCE') {
+              <span class="btn disabled book">Not bookable right now</span>
+            } @else {
+              <a class="btn book" routerLink="/book" [queryParams]="{ vehicleId: vehicle.id }">Book this van</a>
+            }
           </div>
         </article>
       }

@@ -211,3 +211,117 @@ For Vehicle and Customer the API sends and receives the entity itself. For booki
 - `Vehicle.status = BOOKED` isn't set automatically. Availability now comes from booking **dates**, so `BOOKED` may become unnecessary. Decide in Phase 5 whether to drop it or set it on the day of pickup.
 - `@FutureOrPresent` also applies when *editing*, so a booking that has already started can't have its dates edited. Usually that's what you want.
 - Postgres could enforce "no overlaps" itself with an *exclusion constraint* (`EXCLUDE USING gist`). That's a stronger guarantee worth learning once migrations (Flyway) are added.
+
+---
+
+## Phase 4: Booking flow (frontend)
+
+User journey: **Vans page → "Book this van" → booking form (live availability + price estimate) → confirmation page**.
+
+### `models/booking.ts`, `models/customer.ts`
+- TypeScript mirrors of the backend DTOs. `BookingRequest` is what we **send**, `Booking` is what we **get back**. They're separate types because the server adds fields (`id`, `status`, `totalPrice`, `createdAt`) that the client must not set.
+- `NewCustomer = Omit<Customer, 'id'>` is a *utility type*: "a Customer without the id". Handy for create requests.
+- Dates are plain `'YYYY-MM-DD'` strings everywhere. That's the same format as `<input type="date">` and Java's `LocalDate`, so no conversion is needed.
+
+### `services/booking.service.ts`, `services/customer.service.ts`
+- Same pattern as `VehicleService`: one method per endpoint, each returning an `Observable`.
+- `http.get(url, { params: { vehicleId, startDate, endDate } })` lets HttpClient build and URL-encode the `?a=1&b=2` query string. Don't glue strings together yourself.
+
+### `shared/dates.ts`: timezone gotcha
+- `new Date().toISOString()` gives the **UTC** date. In the Philippines (UTC+8) that's still *yesterday* until 8 AM, so "today" would be wrong every morning. `todayIso()` builds the date from local `getFullYear()/getMonth()/getDate()` instead.
+- `rentalDays()` uses the **same inclusive rule as the backend** (10–12 Nov = 3 days), so the estimate matches the real price.
+- `'YYYY-MM-DD'` strings can be compared with `<` and `>` directly, because text order equals date order in that format.
+
+### `shared/problem.ts`: one place to turn errors into messages
+- Every HTTP error arrives as an `HttpErrorResponse`. Its `.error` is the backend's ProblemDetail JSON from Phase 1, so we show `detail`, or the per-field `errors`.
+- `status === 0` means the request never reached the server (backend down, or CORS blocked).
+
+### `app.config.ts`: `withComponentInputBinding()`
+- With this enabled, the router passes **route params and query params straight into component inputs**:
+  - `/bookings/:id` fills `id = input.required<string>()` in the confirmation component.
+  - `/book?vehicleId=2` fills `vehicleId = input<string>()` in the form.
+- There's no need to inject `ActivatedRoute` and subscribe. Values always arrive as **strings**, hence `Number(this.id())`.
+
+### `app.routes.ts`
+- `/book` (optional `?vehicleId=`) → form; `/bookings/:id` → confirmation; `**` (any unknown URL) → redirect to `/vehicles`.
+- Each page is lazy-loaded, so the form's code (the biggest chunk, because of the forms library) is only downloaded when someone opens it.
+
+### `vehicles/vehicle-list/`: "Book this van" button
+- `routerLink="/book" [queryParams]="{ vehicleId: vehicle.id }"` builds the link `/book?vehicleId=2`.
+- Vans `UNDER_MAINTENANCE` show a disabled "Not bookable right now" instead.
+- `routerLinkActive="active"` in the header adds the `active` class to the link of the current page (the white underline).
+
+### `bookings/booking-form/`: reactive forms
+**Reactive forms** define the form in TypeScript and connect the HTML to it, as opposed to template-driven forms that live in the HTML.
+
+```ts
+form = this.fb.nonNullable.group({
+  vehicleId: [0, [Validators.required, Validators.min(1)]],
+  dates:    this.fb.nonNullable.group({ startDate: [''], endDate: [''] }, { validators: dateRangeValidator }),
+  customer: this.fb.nonNullable.group({ fullName: [...], contactNumber: [...], email: [...] }),
+  purpose: ['', Validators.maxLength(255)]
+});
+```
+- In the HTML: `[formGroup]="form"` on the `<form>`, `formGroupName="dates"` on a fieldset, `formControlName="startDate"` on the input.
+- `nonNullable` means `reset()` goes back to the initial value instead of `null`, and the types are `string`, not `string | null`.
+- **Nested groups** (`dates`, `customer`) mirror the screen sections and let one validator see two fields together.
+- **Custom group validator** `dateRangeValidator` returns `{ endBeforeStart: true }` or `{ startInPast: true }` (or `null` if OK). The template checks it with `form.controls.dates.hasError('endBeforeStart')`.
+- Validators **mirror the backend** (`maxLength(100)` = `@Size(max = 100)`) so the user sees the problem instantly. The backend still validates everything, because the frontend can always be bypassed (curl, Postman).
+- **Errors only after `touched`:** the user isn't yelled at before typing. On submit, `markAllAsTouched()` reveals every remaining error at once.
+- `<option [ngValue]="vehicle.id">` keeps the value a **number**. Plain `value="..."` would turn it into a string.
+
+### Real-time availability: an RxJS pipeline
+```ts
+form.valueChanges.pipe(
+  startWith(null),                       // also run once on load (for a ?vehicleId= preselect)
+  map(() => ({ vehicleId, startDate, endDate })),
+  distinctUntilChanged(sameVanAndDates), // typing your name doesn't trigger a check
+  tap(() => availability.set('idle')),
+  debounceTime(300),                     // wait until the user pauses for 300 ms
+  switchMap(q => checkAvailability(q)),  // cancels the previous request if a new one starts
+  takeUntilDestroyed()                   // auto-unsubscribe when leaving the page
+).subscribe(state => availability.set(state));
+```
+- **Why `switchMap`?** The user picks the 10th, then the 11th. If the answer for the 10th arrives *after* the answer for the 11th, without `switchMap` the screen would show the wrong (old) result. `switchMap` drops the old request.
+- **Why `debounceTime`?** It avoids firing a request for every click in the date picker.
+- The state is one signal with 5 values: `'idle' | 'checking' | 'available' | 'unavailable' | 'error'`. A single "state" signal is easier to reason about than several booleans.
+- The submit button is disabled unless the state is `'available'`.
+
+### Signals + forms: `toSignal` and `computed`
+- `toSignal(form.valueChanges...)` turns the form's value stream into a signal.
+- `computed()` values (`selectedVehicle`, `days`, `estimatedTotal`) then **recalculate automatically** when the form changes. There's no manual "update the total" code.
+- The total is labelled *(estimate)*. The **server** calculates the real `totalPrice`, and the confirmation page shows the server's number.
+
+### Submitting: two requests in a row
+```ts
+getOrCreateCustomer(customer).pipe(
+  switchMap(saved => bookingService.create({ ...dates, customerId: saved.id }))
+).subscribe({ next: b => router.navigate(['/bookings', b.id]), error: ... });
+```
+- The backend needs a `customerId`, so the customer is created first, then the booking. `switchMap` chains them: the second request starts with the result of the first.
+- **409 handling:** if someone else books the same dates *between* the availability check and the click (tested on purpose), the server's message is shown and the status flips to "Not available".
+- **No duplicate customer on retry:** the created customer is remembered (`savedCustomer`). If the user picks new dates and submits again with the same details, it's reused instead of created twice.
+
+### `bookings/booking-confirmation/`
+- `id = input.required<string>()` comes from the URL. The component loads `GET /api/bookings/{id}` in `ngOnInit`.
+- `DatePipe` (`date: 'EEE, MMM d, y'` → "Fri, Nov 20, 2026") treats a date-only string as a **local** date, so there's no timezone shift.
+- **Template gotcha (hit while building):** `@if (booking(); as b)` only works on the **first** `@if` of a chain. `@else if (x; as y)` is a compile error, so the block with `as` must come first.
+
+### `styles.scss`: global `.btn`
+- Component styles are **scoped** (they only affect their own component). The button is used on 3 pages, so it lives in the global stylesheet instead.
+- **Whitespace gotcha:** Angular removes whitespace-only text between tags, so `</strong> <span>` renders with **no** space. The gap is added with CSS `margin-left` instead.
+
+### How Phase 4 was tested
+A Node script drove a real (headless) Chrome through the Chrome DevTools Protocol. It clicked buttons, filled fields and read the page, and **16 checks passed**:
+- Book button preselects the van; submit stays disabled until dates are available
+- End-before-start error; "Available" with a correct estimate (3 × ₱3,500 = ₱10,500)
+- Empty details show field errors without sending a request
+- A successful submit opens the confirmation with the server's dates, status and total
+- Overlapping dates show "Not available"
+- Someone booking first → 409 message; a retry with new dates works without a duplicate customer
+- An unknown booking id shows an error; no horizontal scroll at phone width (390 px)
+
+### Known limitations and ideas for later
+- **Privacy:** anyone who guesses `/bookings/5` can see that booking's name and phone number. Fine for learning, but before going public use a random reference code instead of the id, or require login (Phase 6).
+- **Repeat customers** get a new customer row each time they book. Later: look up an existing customer by contact number.
+- Creating the customer and the booking are two separate requests. If the second fails for good, a customer without bookings is left behind. A single backend endpoint (`POST /api/bookings` with customer details inside) would make it one transaction.

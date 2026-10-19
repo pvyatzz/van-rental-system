@@ -1,0 +1,46 @@
+<section class="page">
+  @if (booking(); as b) {
+    <div class="banner">
+      <h1>Booking request received</h1>
+      <p>
+        Thank you, {{ b.customerName }}! Your booking is <strong>pending</strong>. We'll contact you at
+        <strong>{{ b.customerContactNumber }}</strong> to confirm it.
+      </p>
+    </div>
+
+    <dl class="summary">
+      <dt>Booking no.</dt>
+      <dd>#{{ b.id }}</dd>
+
+      <dt>Status</dt>
+      <dd><span class="badge" [attr.data-status]="b.status">{{ b.status }}</span></dd>
+
+      <dt>Van</dt>
+      <dd>{{ b.vehicleModel }} #{{ b.vehicleId }}</dd>
+
+      <dt>Pick-up</dt>
+      <dd>{{ b.startDate | date: 'EEE, MMM d, y' }}</dd>
+
+      <dt>Return</dt>
+      <dd>{{ b.endDate | date: 'EEE, MMM d, y' }}</dd>
+
+      <dt>Duration</dt>
+      <dd>{{ days() }} {{ days() === 1 ? 'day' : 'days' }}</dd>
+
+      @if (b.purpose) {
+        <dt>Purpose</dt>
+        <dd>{{ b.purpose }}</dd>
+      }
+
+      <dt>Total</dt>
+      <dd class="total">{{ b.totalPrice | currency: 'PHP' : 'symbol' : '1.0-2' }}</dd>
+    </dl>
+
+    <a class="btn" routerLink="/vehicles">Back to vans</a>
+  } @else if (error()) {
+    <p class="error">{{ error() }}</p>
+    <a routerLink="/vehicles">← Back to vans</a>
+  } @else {
+    <p>Loading booking…</p>
+  }
+</section>

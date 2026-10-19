@@ -67,12 +67,12 @@ npx -p @angular/cli@19 ng new . --routing --style=scss --skip-tests
 - [x] Unit tests for booking rules (`BookingServiceTest`)
 - [x] **Commit:** `feat: add Customer and Booking entities with availability validation`
 
-## Phase 4 — Booking Flow (Frontend)
-- [ ] `BookingService` (Angular)
-- [ ] Booking form — pick vehicle, select date range, enter customer info
-- [ ] Show real-time availability feedback (disable/warn if dates conflict)
-- [ ] Booking confirmation view
-- [ ] **Commit:** `feat: add booking form and availability UI`
+## Phase 4 — Booking Flow (Frontend) (done)
+- [x] `BookingService` (Angular)
+- [x] Booking form — pick vehicle, select date range, enter customer info
+- [x] Show real-time availability feedback (disable/warn if dates conflict)
+- [x] Booking confirmation view
+- [x] **Commit:** `feat: add booking form and availability UI`
 
 ## Phase 5 — Admin View
 - [ ] Simple admin dashboard — list all bookings, confirm/cancel, manage vehicle info (edit rate, status, photo)
