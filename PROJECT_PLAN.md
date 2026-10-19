@@ -88,6 +88,14 @@ npx -p @angular/cli@19 ng new . --routing --style=scss --skip-tests
 - [x] Reports (most-booked vehicle, monthly revenue, per-van table)
 - [ ] Deployment (e.g. Render, Railway, or a VPS) — see "Before going online" in LEARNING_NOTES.md
 
+## Phase 7 — Customer accounts & down payment
+- [x] Customers sign in with Google before booking (name + email from Google; "My bookings" page)
+- [ ] Paste the Google OAuth Client ID into `environment.ts` and `GOOGLE_CLIENT_ID` (steps in LEARNING_NOTES 7.1)
+- [x] ₱500 down payment: GCash/InstaPay QR in the booking form (`bank-acc` section), proof screenshot upload
+- [x] Admin views the proof, verifies or rejects it; Confirm requires a verified payment; customer can re-upload
+- [x] Emails: booking request received, payment not confirmed, booking confirmed
+- [ ] Configure a real mail server (Gmail App Password — LEARNING_NOTES 6.2) so emails are actually sent
+
 ---
 
 ## Working Agreement
