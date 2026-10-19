@@ -94,7 +94,7 @@ npx -p @angular/cli@19 ng new . --routing --style=scss --skip-tests
 - [x] ₱500 down payment: GCash/InstaPay QR in the booking form (`bank-acc` section), proof screenshot upload
 - [x] Admin views the proof, verifies or rejects it; Confirm requires a verified payment; customer can re-upload
 - [x] Emails: booking request received, payment not confirmed, booking confirmed
-- [ ] Configure a real mail server (Gmail App Password — LEARNING_NOTES 6.2) so emails are actually sent
+- [ ] Fill in `secrets.properties` with your Gmail App Password (LEARNING_NOTES 8.1) so emails are actually sent
 
 ## Phase 8 — Modern UI
 - [x] Design system (tokens, Inter font, shared buttons/cards/badges/forms) in `styles.scss`

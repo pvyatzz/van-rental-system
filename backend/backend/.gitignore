@@ -31,3 +31,6 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### Private settings (Gmail App Password etc.) — never commit ###
+src/main/resources/secrets.properties

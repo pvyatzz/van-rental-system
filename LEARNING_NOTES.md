@@ -521,6 +521,8 @@ BookingService.changeStatus(CONFIRMED)
 - No email address on the customer → skipped (logged).
 
 ### Configuration: environment variables, not code
+> **Update (Phase 8.1):** on your own computer, use the one-time `secrets.properties` file instead (see Phase 8.1 below). The environment variables here are still how you configure a real server.
+
 Spring maps environment variables to properties automatically ("relaxed binding"): `SPRING_MAIL_HOST` becomes `spring.mail.host`. To send real email with **Gmail**:
 1. In your Google account, turn on 2-Step Verification, then create an **App Password** (Security → App passwords). Your normal password won't work.
 2. Start the backend with:
@@ -812,6 +814,34 @@ Before, every component had its own colours and button styles, which is why page
   - admin login works from the shared page; the booking summary card shows ₱10,500 / balance ₱10,000; the booking reaches the "request received" banner; admin "Payments to check" = 1;
   - the phone menu opens; no sideways scroll on any page.
 - The test booking and test customer were deleted afterwards.
+
+---
+
+## Phase 8.1: Real email, set up once
+
+The emails were already **automatic**: the backend sends them by itself when a customer books, when a payment is rejected, and when a booking is confirmed. What was missing was a **mail account to send from**. The old way (typing `$env:SPRING_MAIL_...` lines before every start) was easy to forget, and didn't help when starting from IntelliJ.
+
+### Set it up once
+1. Google account → turn on **2-Step Verification** → create an **App Password** at https://myaccount.google.com/apppasswords (name it "Van Rental"). It's 16 characters; your normal Gmail password won't work.
+2. In `backend/backend/src/main/resources/`, copy `secrets.properties.example` to **`secrets.properties`**.
+3. Fill in `spring.mail.username`, `spring.mail.password` (the App Password) and `app.mail.from` (the same Gmail address).
+4. Restart the backend (IntelliJ or `.\mvnw.cmd spring-boot:run`). From then on every booking email is really sent. The log shows `Email "Booking request received: VR-…" sent to …`.
+
+### How it works
+- `application.properties` has `spring.config.import=optional:classpath:secrets.properties`.
+  - **`spring.config.import`** tells Spring Boot to also read another settings file; its values are added to (and override) `application.properties`.
+  - **`classpath:`** means "next to `application.properties`" (in `src/main/resources`, copied into `target/classes` by every build). So it's found no matter which folder IntelliJ or Maven starts in.
+  - **`optional:`** means "if the file isn't there, carry on". A fresh clone from GitHub has no `secrets.properties`, starts normally, and just logs the emails.
+- `backend/backend/.gitignore` lists `src/main/resources/secrets.properties`, so **git never sees it** (checked with `git check-ignore`). The `.example` file *is* committed, so anyone can see which settings exist without seeing your password.
+- The example also sets **timeouts** (10 s), so a mail server that doesn't answer can't tie up the background email thread forever.
+- Other private settings (`app.admin.password`, `spring.datasource.password`) can go in the same file.
+- ⚠️ Because it's on the classpath, `secrets.properties` would be packed into a `.jar` you build on your computer. For a real server, don't copy that jar with your secrets in it: use environment variables there (see 6.2 and the deployment checklist).
+
+### How it was tested (without touching your running app)
+Your IntelliJ backend was running from the same `target/classes` folder, so the test used a **copy** of the compiled app in a scratch folder, started on port 8081:
+- With a temporary `secrets.properties` that pointed at the fake SMTP server, a booking produced the "Booking request received" email **automatically**, sent from the address in the file. That proves the file is loaded.
+- With **no** `secrets.properties`, the copy still started normally (port 8082), as a fresh clone would.
+- The test booking and customer were deleted afterwards; your own real booking was left alone.
 
 ---
 
