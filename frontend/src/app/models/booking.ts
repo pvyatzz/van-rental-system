@@ -26,6 +26,14 @@ export interface Booking {
   createdAt: string;
 }
 
+/** Optional search filters for GET /api/bookings */
+export interface BookingFilters {
+  vehicleId?: number;
+  status?: BookingStatus | '';
+  from?: string;
+  to?: string;
+}
+
 export interface Availability {
   vehicleId: number;
   startDate: string;

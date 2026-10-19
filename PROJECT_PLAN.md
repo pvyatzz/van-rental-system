@@ -74,10 +74,10 @@ npx -p @angular/cli@19 ng new . --routing --style=scss --skip-tests
 - [x] Booking confirmation view
 - [x] **Commit:** `feat: add booking form and availability UI`
 
-## Phase 5 — Admin View
-- [ ] Simple admin dashboard — list all bookings, confirm/cancel, manage vehicle info (edit rate, status, photo)
-- [ ] Basic table with filters (by vehicle, by date range, by status)
-- [ ] **Commit:** `feat: add admin dashboard for managing bookings and vehicles`
+## Phase 5 — Admin View (done)
+- [x] Simple admin dashboard — list all bookings, confirm/cancel, manage vehicle info (edit rate, status, photo)
+- [x] Basic table with filters (by vehicle, by date range, by status)
+- [x] **Commit:** `feat: add admin dashboard for managing bookings and vehicles`
 
 ## Phase 6 — Polish & Extras (later, optional)
 - [ ] Authentication (admin login — Spring Security)

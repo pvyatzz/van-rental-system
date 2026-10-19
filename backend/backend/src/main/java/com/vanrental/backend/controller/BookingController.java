@@ -4,6 +4,7 @@ import com.vanrental.backend.dto.AvailabilityResponse;
 import com.vanrental.backend.dto.BookingRequest;
 import com.vanrental.backend.dto.BookingResponse;
 import com.vanrental.backend.dto.BookingStatusUpdate;
+import com.vanrental.backend.model.BookingStatus;
 import com.vanrental.backend.service.BookingService;
 import jakarta.validation.Valid;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -25,9 +26,14 @@ public class BookingController {
         this.bookingService = bookingService;
     }
 
+    /** e.g. GET /api/bookings?vehicleId=1&status=PENDING&from=2026-11-01&to=2026-11-30 (all optional) */
     @GetMapping
-    public List<BookingResponse> getAll() {
-        return bookingService.findAll();
+    public List<BookingResponse> search(
+            @RequestParam(required = false) Long vehicleId,
+            @RequestParam(required = false) BookingStatus status,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
+        return bookingService.search(vehicleId, status, from, to);
     }
 
     @GetMapping("/{id}")

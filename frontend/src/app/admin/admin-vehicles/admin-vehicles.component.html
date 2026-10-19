@@ -1,0 +1,89 @@
+@if (error()) {
+  <p class="alert" role="alert">{{ error() }}</p>
+} @else if (loading()) {
+  <p class="muted">Loading vans…</p>
+} @else {
+  <div class="list">
+    @for (vehicle of vehicles(); track vehicle.id) {
+      <article class="van" [class.editing]="editingId() === vehicle.id">
+        @if (editingId() === vehicle.id) {
+          <!-- Edit mode -->
+          <form [formGroup]="editForm" (ngSubmit)="save()" novalidate>
+            <h2>Edit van #{{ vehicle.id }}</h2>
+            <div class="grid">
+              <div class="wide">
+                <label for="model">Model</label>
+                <input id="model" formControlName="model" />
+                @if (showError('model')) { <p class="field-error">Model is required.</p> }
+              </div>
+              <div>
+                <label for="capacity">Seats</label>
+                <input id="capacity" type="number" min="1" formControlName="capacity" />
+                @if (showError('capacity')) { <p class="field-error">At least 1.</p> }
+              </div>
+              <div>
+                <label for="rate">Rate per day (₱)</label>
+                <input id="rate" type="number" min="0" step="50" formControlName="ratePerDay" />
+                @if (showError('ratePerDay')) { <p class="field-error">0 or more.</p> }
+              </div>
+              <div>
+                <label for="status">Status</label>
+                <select id="status" formControlName="status">
+                  @for (s of statuses; track s.value) {
+                    <option [value]="s.value">{{ s.label }}</option>
+                  }
+                </select>
+              </div>
+              <div class="wide">
+                <label for="photo">Photo URL</label>
+                <input id="photo" formControlName="photoUrl" list="known-photos"
+                       placeholder="/images/your-photo.png" />
+                <datalist id="known-photos">
+                  @for (photo of knownPhotos; track photo) {
+                    <option [value]="photo"></option>
+                  }
+                </datalist>
+                <p class="hint">Pick a suggestion or type a path. New photos: add them to <code>van-img/</code> and
+                  copy them into <code>frontend/public/images/</code>.</p>
+              </div>
+            </div>
+
+            <div class="preview">
+              @if (photoPreview()) {
+                <img [src]="photoPreview()" alt="Photo preview" />
+              } @else {
+                <div class="no-photo">No photo</div>
+              }
+            </div>
+
+            @if (saveError()) {
+              <p class="alert" role="alert">{{ saveError() }}</p>
+            }
+            <div class="buttons">
+              <button type="submit" class="btn" [disabled]="saving()">{{ saving() ? 'Saving…' : 'Save' }}</button>
+              <button type="button" class="secondary" (click)="cancelEdit()" [disabled]="saving()">Cancel</button>
+            </div>
+          </form>
+        } @else {
+          <!-- View mode -->
+          @if (vehicle.photoUrl) {
+            <img [src]="vehicle.photoUrl" [alt]="vehicle.model" />
+          } @else {
+            <div class="no-photo">No photo</div>
+          }
+          <div class="info">
+            <h2>{{ vehicle.model }} <span class="muted">#{{ vehicle.id }}</span></h2>
+            <p>{{ vehicle.capacity }} seats · {{ vehicle.ratePerDay | currency: 'PHP' : 'symbol' : '1.0-2' }} / day</p>
+            <span class="status" [attr.data-status]="vehicle.status">{{ statusLabel(vehicle.status) }}</span>
+            @if (savedId() === vehicle.id) {
+              <span class="saved">✓ Saved</span>
+            }
+          </div>
+          <button type="button" class="secondary" (click)="startEdit(vehicle)" [disabled]="editingId() !== null">
+            Edit
+          </button>
+        }
+      </article>
+    }
+  </div>
+}

@@ -1,8 +1,11 @@
 package com.vanrental.backend.repository;
 
 import com.vanrental.backend.model.Booking;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -12,7 +15,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface BookingRepository extends JpaRepository<Booking, Long> {
+public interface BookingRepository extends JpaRepository<Booking, Long>, JpaSpecificationExecutor<Booking> {
 
     /**
      * Bookings for a vehicle whose dates overlap [startDate, endDate] (both inclusive),
@@ -29,9 +32,11 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
                                   @Param("startDate") LocalDate startDate,
                                   @Param("endDate") LocalDate endDate);
 
-    // @EntityGraph loads vehicle + customer in the same query (avoids one extra query per row)
+    // Search with optional filters (see BookingSpecifications). @EntityGraph loads vehicle + customer
+    // in the same query, avoiding one extra query per row.
+    @Override
     @EntityGraph(attributePaths = {"vehicle", "customer"})
-    List<Booking> findAllByOrderByStartDateDesc();
+    List<Booking> findAll(Specification<Booking> spec, Sort sort);
 
     @EntityGraph(attributePaths = {"vehicle", "customer"})
     Optional<Booking> findWithDetailsById(Long id);

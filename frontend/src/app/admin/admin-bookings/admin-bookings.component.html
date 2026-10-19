@@ -1,0 +1,96 @@
+<form class="filters" [formGroup]="filters">
+  <div>
+    <label for="f-vehicle">Van</label>
+    <select id="f-vehicle" formControlName="vehicleId">
+      <option [ngValue]="0">All vans</option>
+      @for (vehicle of vehicles(); track vehicle.id) {
+        <option [ngValue]="vehicle.id">{{ vehicle.model }} #{{ vehicle.id }}</option>
+      }
+    </select>
+  </div>
+  <div>
+    <label for="f-status">Status</label>
+    <select id="f-status" formControlName="status">
+      <option value="">All statuses</option>
+      @for (status of statuses; track status) {
+        <option [value]="status">{{ status }}</option>
+      }
+    </select>
+  </div>
+  <div>
+    <label for="f-from">From</label>
+    <input id="f-from" type="date" formControlName="from" />
+  </div>
+  <div>
+    <label for="f-to">To</label>
+    <input id="f-to" type="date" formControlName="to" />
+  </div>
+  <button type="button" class="link" (click)="clearFilters()">Clear filters</button>
+</form>
+
+<p class="summary">
+  {{ bookings().length }} {{ bookings().length === 1 ? 'booking' : 'bookings' }}
+  @if (pendingCount() > 0) {
+    · <strong>{{ pendingCount() }} waiting for confirmation</strong>
+  }
+</p>
+
+@if (actionError()) {
+  <p class="alert" role="alert">{{ actionError() }}</p>
+}
+
+@if (error()) {
+  <p class="alert" role="alert">{{ error() }}</p>
+} @else if (loading()) {
+  <p class="muted">Loading bookings…</p>
+} @else if (bookings().length === 0) {
+  <p class="muted">No bookings match these filters.</p>
+} @else {
+  <!-- the wrapper scrolls sideways on small screens instead of squashing the table -->
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Van</th>
+          <th>Customer</th>
+          <th>Dates</th>
+          <th class="num">Total</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (b of bookings(); track b.id) {
+          <tr>
+            <td>{{ b.id }}</td>
+            <td>{{ b.vehicleModel }} #{{ b.vehicleId }}</td>
+            <td>
+              {{ b.customerName }}
+              <a class="phone" [href]="'tel:' + b.customerContactNumber">{{ b.customerContactNumber }}</a>
+            </td>
+            <td class="nowrap">
+              {{ b.startDate | date: 'MMM d' }} – {{ b.endDate | date: 'MMM d, y' }}
+              <span class="muted">({{ days(b) }}d)</span>
+              @if (b.purpose) {
+                <span class="purpose">{{ b.purpose }}</span>
+              }
+            </td>
+            <td class="num">{{ b.totalPrice | currency: 'PHP' : 'symbol' : '1.0-2' }}</td>
+            <td><span class="status" [attr.data-status]="b.status">{{ b.status }}</span></td>
+            <td class="actions">
+              @for (action of actions[b.status]; track action.status) {
+                <button type="button" [class]="'act ' + action.status.toLowerCase()"
+                        [disabled]="busyId() === b.id" (click)="changeStatus(b, action)">
+                  {{ action.label }}
+                </button>
+              } @empty {
+                <span class="muted">—</span>
+              }
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+}

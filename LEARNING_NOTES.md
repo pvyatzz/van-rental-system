@@ -325,3 +325,108 @@ A Node script drove a real (headless) Chrome through the Chrome DevTools Protoco
 - **Privacy:** anyone who guesses `/bookings/5` can see that booking's name and phone number. Fine for learning, but before going public use a random reference code instead of the id, or require login (Phase 6).
 - **Repeat customers** get a new customer row each time they book. Later: look up an existing customer by contact number.
 - Creating the customer and the booking are two separate requests. If the second fails for good, a customer without bookings is left behind. A single backend endpoint (`POST /api/bookings` with customer details inside) would make it one transaction.
+
+---
+
+## Phase 5: Admin dashboard
+
+Two tabs under **`/admin`**:
+- **Bookings:** filter by van, status and date range; Confirm, Mark completed or Cancel.
+- **Vans:** edit model, seats, rate, status and photo.
+
+### Backend: `GET /api/bookings` with optional filters
+```
+GET /api/bookings?vehicleId=1&status=PENDING&from=2026-11-01&to=2026-11-30   (every part optional)
+```
+- `@RequestParam(required = false)`: a missing parameter becomes `null` instead of a 400.
+- **Date window filter:** `from`/`to` keep bookings that **overlap** the window, using the same idea as the availability check. A booking from 10–12 Nov shows up for `from=2026-11-11`, because it's still running on the 11th.
+- `to` before `from` gives a 400 with a clear message.
+
+### `repository/BookingSpecifications.java`: JPA Specifications
+- **Problem:** 4 optional filters make 16 combinations. Writing a `@Query` for each is silly. One query with `(:status IS NULL OR b.status = :status)` looks clever, but Postgres often fails on it ("could not determine data type of parameter") because it can't guess the type of a `null` parameter.
+- **Solution:** a `Specification` is one reusable WHERE condition written in Java:
+  ```java
+  static Specification<Booking> hasStatus(BookingStatus s) {
+      return (root, query, cb) -> cb.equal(root.get("status"), s);
+  }
+  ```
+  The service adds only the conditions the user actually filled in, then combines them with `Specification.allOf(list)`. That means AND, and an empty list means "no filter".
+- `root` is the `Booking` being queried, `cb` (CriteriaBuilder) makes the conditions (`equal`, `lessThanOrEqualTo`, ...), and `root.get("vehicle").get("id")` follows the relationship.
+- To use them, the repository `extends JpaSpecificationExecutor<Booking>`, which adds `findAll(spec, sort)`.
+- We **override** that `findAll` only to put `@EntityGraph` on it, so the vehicle and customer still load in the same query.
+- `Sort.by(DESC, "startDate")` puts the newest bookings first.
+
+### `GlobalExceptionHandler`: `MethodArgumentTypeMismatchException`
+- `?status=FOO` or `?vehicleId=abc` can't be converted to the Java type. Spring's default answer is an ugly or empty 400. Now it's a ProblemDetail: *"Invalid value 'FOO' for parameter 'status'"*.
+
+### `application.properties` cleanup
+- Removed `spring.jpa.database-platform=...PostgreSQLDialect`. Hibernate warned that it's unnecessary, because it detects the database from the connection.
+
+### Frontend: nested routes (`app.routes.ts`, `admin/admin.component.ts`)
+```ts
+{ path: 'admin', loadComponent: AdminComponent, children: [
+    { path: '', redirectTo: 'bookings', pathMatch: 'full' },
+    { path: 'bookings', loadComponent: AdminBookingsComponent },
+    { path: 'vehicles', loadComponent: AdminVehiclesComponent } ] }
+```
+- `AdminComponent` is a **shell**: the title, the tab links and its **own `<router-outlet>`**. The child page appears inside it, while the app's header stays outside. That's two outlets nested.
+- `routerLink="bookings"` (no leading `/`) is **relative**: it resolves to `/admin/bookings` because the link lives inside `/admin`.
+- `AdminComponent` uses inline `template:` and `styles:` instead of separate files. That's fine for small components; bigger ones read better as separate `.html` and `.scss` files.
+
+### `services/booking.service.ts`: `search()` with `HttpParams`
+- Loops over the filters and **skips empty ones**, so the URL is `?status=PENDING`, not `?vehicleId=&status=PENDING&from=&to=`.
+- `HttpParams` is **immutable**: `params.set(...)` returns a *new* object, so you must write `params = params.set(...)`. Forgetting the `params =` is a classic bug where no parameters get sent at all.
+
+### `admin/admin-bookings/`: filters + table + actions
+**Filters → reload** uses the same pattern as the Phase 4 availability check:
+```ts
+filters.valueChanges.pipe(startWith(null), map(...), tap(showLoading), debounceTime(250),
+  switchMap(f => search(f).pipe(catchError(err => { showError(err); return of([]); }))),
+  takeUntilDestroyed())
+```
+- **`catchError` goes *inside* `switchMap`.** If an error reached the outer stream, RxJS would end the whole subscription, and the filters would silently stop working after the first failed request. Inside, only that one request fails and the stream keeps listening.
+- `filters.reset()` ("Clear filters") also fires `valueChanges`, so the table reloads by itself.
+- `vehicleId: 0` means "All vans" in the dropdown; `f.vehicleId || undefined` turns 0 into "don't send it".
+
+**Action buttons**
+- `ACTIONS: Record<BookingStatus, StatusAction[]>` lists which buttons each status gets. It **mirrors the backend rule** `BookingStatus.canChangeTo()`, so the UI never offers a move the server would refuse. The server still checks: the UI is a convenience, the backend is the rule.
+- Cancel asks `confirm(...)` first, because it can't be undone. Confirm doesn't ask, since it's harmless and reversible by cancelling.
+- `busyId` disables only that row's buttons while its request runs, which prevents double-clicks.
+- **Updating a signal holding an array:** `bookings.update(list => list.map(b => b.id === updated.id ? updated : b))` builds a **new** array. Signals compare by reference, so pushing into or changing the *same* array wouldn't trigger a re-render.
+- `@for ... @empty { — }`: the `@empty` block shows when there's nothing to loop over (finished or cancelled bookings get a dash).
+- `<a [href]="'tel:' + phone">` makes the number tappable to call on a phone.
+- `.table-wrap { overflow-x: auto }`: on a phone the **table** scrolls sideways inside its box, while the page itself never scrolls sideways.
+
+### `admin/admin-vehicles/`: inline edit
+- **One edit form for all vans** plus an `editingId` signal. Only the van being edited shows the form, and the other Edit buttons are disabled. That's simpler than one form per van.
+- `editForm.reset({...vehicle})` **loads** a van into the form and also clears the touched/dirty flags from the previous edit.
+- **Photo field:** `<input list="known-photos">` + `<datalist>` gives suggestions (the photos already in `public/images/`) while still allowing any text.
+- **Live preview:** `toSignal(editForm.controls.photoUrl.valueChanges)` makes the image update while you type the path.
+- After saving: the list row is replaced (same immutable-update pattern) and a "✓ Saved" note shows on that card.
+- Setting a van to **Under maintenance** immediately makes it unbookable on the public page ("Not bookable right now") and in the API (409).
+
+### Gotcha: a leftover dev server (hit while testing)
+- `ng serve` was started again, but **port 4200 was still used by an older `ng serve`**. The new one only printed "Port 4200 is already in use" and quit, and the old one kept serving.
+- The old server had recompiled at the exact moment between two file edits (the service already used `BookingFilters`, the model didn't have it yet) and **kept showing that stale error overlay**, even though `ng build` was fine.
+- **Lesson:** if the browser shows an error that doesn't match your code, check what's actually running on the port. In PowerShell:
+  ```powershell
+  Get-NetTCPConnection -LocalPort 4200 -State Listen | Select-Object OwningProcess
+  Stop-Process -Id <that number>
+  ```
+  Or in cmd: `netstat -ano | findstr :4200` then `taskkill /PID <pid> /F`. The same works for 8080 if the backend says the port is in use.
+
+### How Phase 5 was tested
+- **API:** each filter alone and combined, plus bad input (`status=FOO`, `to` before `from`).
+- **Browser (headless Chrome), 21 checks:**
+  - `/admin` → bookings tab; Confirm; Cancel (accepted, and dismissed → nothing changes)
+  - status + date filters, the "to before from" message, Clear filters
+  - Vans tab: edit form prefilled, other Edit buttons locked, empty rate blocked; saving rate + maintenance updates the database; the public page shows the van as not bookable
+  - no page-level sideways scroll at phone width
+- Test data was deleted and the edited van restored afterwards.
+
+### Known limitations and ideas for later
+- **No login yet:** anyone who opens `/admin` can confirm or cancel bookings. Phase 6 adds Spring Security. Until then, only run it on your own computer.
+- `Vehicle.status = BOOKED` is still only set by hand. Availability already comes from booking dates, so consider removing `BOOKED` or setting it automatically.
+- Setting a van to *Under maintenance* doesn't touch its **existing** bookings. Filter the Bookings tab by that van to see who needs a call.
+- No "add van" or "delete van" buttons (the API supports both). Add them if the fleet changes.
+- No pagination. Fine for a 3-van business, but at hundreds of bookings, add `Pageable` to the search.

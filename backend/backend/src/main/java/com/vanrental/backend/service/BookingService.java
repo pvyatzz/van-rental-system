@@ -12,14 +12,18 @@ import com.vanrental.backend.model.Customer;
 import com.vanrental.backend.model.Vehicle;
 import com.vanrental.backend.model.VehicleStatus;
 import com.vanrental.backend.repository.BookingRepository;
+import com.vanrental.backend.repository.BookingSpecifications;
 import com.vanrental.backend.repository.CustomerRepository;
 import com.vanrental.backend.repository.VehicleRepository;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
@@ -38,9 +42,27 @@ public class BookingService {
         this.customerRepository = customerRepository;
     }
 
+    /** All filters are optional (null = don't filter on it). from/to keep bookings that overlap that window. */
     @Transactional(readOnly = true)
-    public List<BookingResponse> findAll() {
-        return bookingRepository.findAllByOrderByStartDateDesc().stream()
+    public List<BookingResponse> search(Long vehicleId, BookingStatus status, LocalDate from, LocalDate to) {
+        if (from != null && to != null && to.isBefore(from)) {
+            throw new InvalidRequestException("'to' date must be on or after 'from' date");
+        }
+        List<Specification<Booking>> filters = new ArrayList<>();
+        if (vehicleId != null) {
+            filters.add(BookingSpecifications.hasVehicle(vehicleId));
+        }
+        if (status != null) {
+            filters.add(BookingSpecifications.hasStatus(status));
+        }
+        if (from != null) {
+            filters.add(BookingSpecifications.endsOnOrAfter(from));
+        }
+        if (to != null) {
+            filters.add(BookingSpecifications.startsOnOrBefore(to));
+        }
+        return bookingRepository.findAll(Specification.allOf(filters), Sort.by(Sort.Direction.DESC, "startDate"))
+                .stream()
                 .map(BookingResponse::from)
                 .toList();
     }

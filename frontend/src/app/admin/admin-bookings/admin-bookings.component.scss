@@ -1,0 +1,172 @@
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+  background: #fff;
+  border: 1px solid #e3e3e3;
+  border-radius: 10px;
+  padding: 14px 16px;
+
+  > div {
+    flex: 1 1 160px;
+  }
+
+  label {
+    display: block;
+    font-size: 0.85rem;
+    margin-bottom: 4px;
+    color: #555;
+  }
+
+  select,
+  input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 8px 10px;
+    border: 1px solid #c9ccd1;
+    border-radius: 6px;
+    font: inherit;
+    background: #fff;
+  }
+}
+
+.link {
+  background: none;
+  border: 0;
+  color: #1f3b57;
+  text-decoration: underline;
+  cursor: pointer;
+  font: inherit;
+  padding: 8px 4px;
+}
+
+.summary {
+  margin: 16px 0 10px;
+}
+
+.muted {
+  color: #777;
+}
+
+.alert {
+  background: #fde8e7;
+  color: #b3261e;
+  padding: 10px 12px;
+  border-radius: 6px;
+}
+
+.table-wrap {
+  overflow-x: auto;
+  background: #fff;
+  border: 1px solid #e3e3e3;
+  border-radius: 10px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.92rem;
+}
+
+th,
+td {
+  text-align: left;
+  padding: 10px 12px;
+  border-bottom: 1px solid #eef0f2;
+  vertical-align: top;
+}
+
+th {
+  background: #f7f8fa;
+  font-weight: 600;
+  color: #444;
+  white-space: nowrap;
+}
+
+tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.num {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.nowrap {
+  white-space: nowrap;
+}
+
+.phone {
+  display: block;
+  color: #555;
+  font-size: 0.85rem;
+}
+
+.purpose {
+  display: block;
+  color: #666;
+  font-size: 0.85rem;
+  white-space: normal;
+  max-width: 260px;
+}
+
+.status {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 600;
+
+  &[data-status='PENDING'] {
+    background: #fdecd6;
+    color: #8a4b00;
+  }
+
+  &[data-status='CONFIRMED'] {
+    background: #e3f4e6;
+    color: #1e6b2e;
+  }
+
+  &[data-status='COMPLETED'] {
+    background: #e4ecf5;
+    color: #1f3b57;
+  }
+
+  &[data-status='CANCELLED'] {
+    background: #f1f1f1;
+    color: #777;
+  }
+}
+
+.actions {
+  white-space: nowrap;
+}
+
+.act {
+  padding: 5px 10px;
+  margin-right: 6px;
+  border-radius: 5px;
+  border: 1px solid #c9ccd1;
+  background: #fff;
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+
+  &.confirmed,
+  &.completed {
+    background: #1f3b57;
+    border-color: #1f3b57;
+    color: #fff;
+  }
+
+  &.cancelled {
+    color: #b3261e;
+    border-color: #e4b4b0;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: wait;
+  }
+}

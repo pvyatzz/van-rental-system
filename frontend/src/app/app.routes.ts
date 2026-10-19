@@ -19,5 +19,23 @@ export const routes: Routes = [
       import('./bookings/booking-confirmation/booking-confirmation.component')
         .then(m => m.BookingConfirmationComponent)
   },
+  {
+    // Admin area: a shell component with its own <router-outlet> for the child pages
+    path: 'admin',
+    loadComponent: () => import('./admin/admin.component').then(m => m.AdminComponent),
+    children: [
+      { path: '', redirectTo: 'bookings', pathMatch: 'full' },
+      {
+        path: 'bookings',
+        loadComponent: () =>
+          import('./admin/admin-bookings/admin-bookings.component').then(m => m.AdminBookingsComponent)
+      },
+      {
+        path: 'vehicles',
+        loadComponent: () =>
+          import('./admin/admin-vehicles/admin-vehicles.component').then(m => m.AdminVehiclesComponent)
+      }
+    ]
+  },
   { path: '**', redirectTo: 'vehicles' }
 ];
