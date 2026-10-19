@@ -4,5 +4,5 @@ export const environment = {
    * Google sign-in: the OAuth Client ID from Google Cloud Console (ends in .apps.googleusercontent.com).
    * Not a secret. Must be the same value as GOOGLE_CLIENT_ID / app.google.client-id in the backend.
    */
-  googleClientId: ''
+  googleClientId: '195255917717-dl1cp2e1gnfoarjcv5096oet2qflq39e.apps.googleusercontent.com'
 };
