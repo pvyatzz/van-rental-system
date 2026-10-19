@@ -3,9 +3,16 @@
   <nav>
     <a routerLink="/vehicles" routerLinkActive="active">Vans</a>
     <a routerLink="/book" routerLinkActive="active">Book a van</a>
-    @if (auth.loggedIn()) {
+    @if (auth.isAdmin()) {
       <a routerLink="/admin" routerLinkActive="active">Admin</a>
-      <button type="button" class="logout" (click)="logout()">Log out ({{ auth.username() }})</button>
+    }
+    @if (auth.isCustomer()) {
+      <a routerLink="/my-bookings" routerLinkActive="active">My bookings</a>
+    }
+    @if (auth.loggedIn()) {
+      <button type="button" class="logout" (click)="logout()">Sign out ({{ auth.displayName() }})</button>
+    } @else {
+      <a routerLink="/signin" routerLinkActive="active">Sign in</a>
     }
   </nav>
 </header>

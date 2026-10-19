@@ -3,6 +3,7 @@ package com.vanrental.backend.service;
 import com.vanrental.backend.exception.ResourceNotFoundException;
 import com.vanrental.backend.model.Customer;
 import com.vanrental.backend.repository.CustomerRepository;
+import com.vanrental.backend.security.GoogleIdentity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,6 +25,22 @@ public class CustomerService {
     public Customer findById(Long id) {
         return customerRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Customer", id));
+    }
+
+    /**
+     * The customer record for a Google sign-in: found by Google id, else an older record with the same email
+     * gets linked, else a new one is made. Name, email and contact number are refreshed on every booking.
+     */
+    @Transactional
+    public Customer findOrCreateFromGoogle(GoogleIdentity identity, String contactNumber) {
+        Customer customer = customerRepository.findByGoogleId(identity.subject())
+                .or(() -> customerRepository.findFirstByEmailIgnoreCaseAndGoogleIdIsNull(identity.email()))
+                .orElseGet(Customer::new);
+        customer.setGoogleId(identity.subject());
+        customer.setFullName(identity.name());
+        customer.setEmail(identity.email());
+        customer.setContactNumber(contactNumber.trim());
+        return customerRepository.save(customer);
     }
 
     public Customer create(Customer customer) {

@@ -36,4 +36,12 @@ public class Customer {
     @Size(max = 100)
     @Column(length = 100)
     private String email;
+
+    // Google's permanent user id for customers who signed in with Google (null for older/admin-made records)
+    @Column(name = "google_id", unique = true, length = 64)
+    private String googleId;
+
+    public Customer(Long id, String fullName, String contactNumber, String email) {
+        this(id, fullName, contactNumber, email, null);
+    }
 }

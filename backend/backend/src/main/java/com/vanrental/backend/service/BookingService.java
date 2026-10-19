@@ -3,6 +3,8 @@ package com.vanrental.backend.service;
 import com.vanrental.backend.dto.AvailabilityResponse;
 import com.vanrental.backend.dto.BookingRequest;
 import com.vanrental.backend.dto.BookingResponse;
+import com.vanrental.backend.dto.CustomerBookingRequest;
+import com.vanrental.backend.security.GoogleIdentity;
 import com.vanrental.backend.exception.BookingConflictException;
 import com.vanrental.backend.exception.InvalidRequestException;
 import com.vanrental.backend.exception.ResourceNotFoundException;
@@ -35,16 +37,38 @@ public class BookingService {
     private final BookingRepository bookingRepository;
     private final VehicleRepository vehicleRepository;
     private final CustomerRepository customerRepository;
+    private final CustomerService customerService;
     private final ApplicationEventPublisher eventPublisher;
 
     public BookingService(BookingRepository bookingRepository,
                           VehicleRepository vehicleRepository,
                           CustomerRepository customerRepository,
+                          CustomerService customerService,
                           ApplicationEventPublisher eventPublisher) {
         this.bookingRepository = bookingRepository;
         this.vehicleRepository = vehicleRepository;
         this.customerRepository = customerRepository;
+        this.customerService = customerService;
         this.eventPublisher = eventPublisher;
+    }
+
+    /**
+     * A signed-in customer books. The customer record is created/updated in the SAME transaction as the
+     * booking, so if the dates turn out to be taken, no half-made customer is left behind.
+     */
+    @Transactional
+    public BookingResponse createForCustomer(CustomerBookingRequest request, GoogleIdentity identity) {
+        validateDates(request.startDate(), request.endDate());
+        Customer customer = customerService.findOrCreateFromGoogle(identity, request.contactNumber());
+        return create(request.withCustomer(customer.getId()));
+    }
+
+    /** The signed-in customer's own bookings, newest first */
+    @Transactional(readOnly = true)
+    public List<BookingResponse> findMine(String googleId) {
+        return bookingRepository.findByCustomerGoogleIdOrderByStartDateDesc(googleId).stream()
+                .map(BookingResponse::from)
+                .toList();
     }
 
     /** All filters are optional (null = don't filter on it). from/to keep bookings that overlap that window. */

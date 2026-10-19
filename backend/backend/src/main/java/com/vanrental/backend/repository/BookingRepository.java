@@ -46,6 +46,10 @@ public interface BookingRepository extends JpaRepository<Booking, Long>, JpaSpec
 
     List<Booking> findByReferenceIsNull();
 
+    // "customer.googleId" written as CustomerGoogleId: Spring follows the relationship for you
+    @EntityGraph(attributePaths = {"vehicle", "customer"})
+    List<Booking> findByCustomerGoogleIdOrderByStartDateDesc(String googleId);
+
     // Derived query: Spring builds "WHERE start_date BETWEEN ?1 AND ?2" from the method name
     @EntityGraph(attributePaths = {"vehicle"})
     List<Booking> findByStartDateBetween(LocalDate from, LocalDate to);

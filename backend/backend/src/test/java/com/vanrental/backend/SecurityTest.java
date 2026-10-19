@@ -1,11 +1,14 @@
 package com.vanrental.backend;
 
 import com.jayway.jsonpath.JsonPath;
+import com.vanrental.backend.security.GoogleIdentity;
+import com.vanrental.backend.security.TokenService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -20,10 +23,25 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
+@TestPropertySource(properties = "app.google.client-id=") // Google sign-in "not set up" in this test
 class SecurityTest {
 
     @Autowired
     MockMvc mockMvc;
+    @Autowired
+    TokenService tokenService;
+
+    private String customerToken() {
+        return tokenService.issueCustomer(new GoogleIdentity("test-google-id", "test@example.com", "Test Customer")).token();
+    }
+
+    private String adminToken() throws Exception {
+        String body = mockMvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"username\":\"admin\",\"password\":\"admin123\"}"))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        return JsonPath.read(body, "$.token");
+    }
 
     @Test
     void publicEndpointsWorkWithoutLogin() throws Exception {
@@ -40,6 +58,8 @@ class SecurityTest {
         mockMvc.perform(get("/api/bookings")).andExpect(status().isUnauthorized());
         mockMvc.perform(get("/api/bookings/1")).andExpect(status().isUnauthorized());
         mockMvc.perform(get("/api/customers")).andExpect(status().isUnauthorized());
+        mockMvc.perform(post("/api/customers").contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isUnauthorized());
         mockMvc.perform(put("/api/vehicles/1").contentType(MediaType.APPLICATION_JSON).content("{}"))
                 .andExpect(status().isUnauthorized());
     }
@@ -54,12 +74,7 @@ class SecurityTest {
 
     @Test
     void loginTokenOpensAdminEndpoints() throws Exception {
-        String body = mockMvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"username\":\"admin\",\"password\":\"admin123\"}"))
-                .andExpect(status().isOk())
-                .andReturn().getResponse().getContentAsString();
-        String token = JsonPath.read(body, "$.token");
-
+        String token = adminToken();
         mockMvc.perform(get("/api/bookings").header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk());
 
@@ -67,5 +82,35 @@ class SecurityTest {
         String tampered = token.substring(0, token.length() - 2) + (token.endsWith("A") ? "BB" : "AA");
         mockMvc.perform(get("/api/bookings").header("Authorization", "Bearer " + tampered))
                 .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void bookingNeedsACustomerSignIn() throws Exception {
+        // not signed in → 401
+        mockMvc.perform(post("/api/bookings").contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isUnauthorized());
+        mockMvc.perform(get("/api/bookings/mine")).andExpect(status().isUnauthorized());
+        // signed in as admin, but booking is for customers → 403 Forbidden
+        mockMvc.perform(get("/api/bookings/mine").header("Authorization", "Bearer " + adminToken()))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void customerCanSeeOwnBookingsButNotAdminPages() throws Exception {
+        String token = customerToken();
+        mockMvc.perform(get("/api/bookings/mine").header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk());
+        mockMvc.perform(get("/api/bookings").header("Authorization", "Bearer " + token))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(get("/api/reports/yearly").header("Authorization", "Bearer " + token))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void googleSignInSaysNotSetUpWithoutClientId() throws Exception {
+        mockMvc.perform(post("/api/auth/google").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"credential\":\"anything\"}"))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(jsonPath("$.detail").value("Google sign-in is not set up yet (GOOGLE_CLIENT_ID is missing)"));
     }
 }

@@ -1,6 +1,7 @@
 import { Routes } from '@angular/router';
 
 import { adminGuard } from './auth/admin.guard';
+import { customerGuard } from './auth/customer.guard';
 
 export const routes: Routes = [
   { path: '', redirectTo: 'vehicles', pathMatch: 'full' },
@@ -10,10 +11,21 @@ export const routes: Routes = [
       import('./vehicles/vehicle-list/vehicle-list.component').then(m => m.VehicleListComponent)
   },
   {
-    // optional ?vehicleId=2 preselects a van
+    // optional ?vehicleId=2 preselects a van. Booking needs a Google sign-in (customerGuard → /signin)
     path: 'book',
+    canActivate: [customerGuard],
     loadComponent: () =>
       import('./bookings/booking-form/booking-form.component').then(m => m.BookingFormComponent)
+  },
+  {
+    path: 'my-bookings',
+    canActivate: [customerGuard],
+    loadComponent: () =>
+      import('./bookings/my-bookings/my-bookings.component').then(m => m.MyBookingsComponent)
+  },
+  {
+    path: 'signin',
+    loadComponent: () => import('./signin/signin.component').then(m => m.SigninComponent)
   },
   {
     // the public reference code (VR-XXXXXXXX), not the database id

@@ -2,6 +2,8 @@ package com.vanrental.backend.service;
 
 import com.vanrental.backend.dto.BookingRequest;
 import com.vanrental.backend.dto.BookingResponse;
+import com.vanrental.backend.dto.CustomerBookingRequest;
+import com.vanrental.backend.security.GoogleIdentity;
 import com.vanrental.backend.exception.BookingConflictException;
 import com.vanrental.backend.exception.InvalidRequestException;
 import com.vanrental.backend.model.Booking;
@@ -46,6 +48,8 @@ class BookingServiceTest {
     VehicleRepository vehicleRepository;
     @Mock
     CustomerRepository customerRepository;
+    @Mock
+    CustomerService customerService;
     @Mock
     ApplicationEventPublisher eventPublisher;
 
@@ -138,6 +142,32 @@ class BookingServiceTest {
 
         assertThatThrownBy(() -> bookingService.changeStatus(5L, BookingStatus.CONFIRMED))
                 .isInstanceOf(InvalidRequestException.class);
+    }
+
+    @Test
+    void signedInCustomerBooksUnderTheirOwnGoogleAccount() {
+        GoogleIdentity maria = new GoogleIdentity("google-123", "maria@gmail.com", "Maria Santos");
+        Customer linked = new Customer(10L, "Maria Santos", "09171234567", "maria@gmail.com", "google-123");
+        when(customerService.findOrCreateFromGoogle(maria, "09171234567")).thenReturn(linked);
+        when(vehicleRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(van));
+        when(customerRepository.findById(10L)).thenReturn(Optional.of(linked));
+        when(bookingRepository.findOverlapping(1L, start, end)).thenReturn(List.of());
+        when(bookingRepository.save(any(Booking.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        BookingResponse result = bookingService.createForCustomer(
+                new CustomerBookingRequest(1L, "09171234567", start, end, null, null, null, null), maria);
+
+        assertThat(result.customerId()).isEqualTo(10L);
+        assertThat(result.customerName()).isEqualTo("Maria Santos");
+    }
+
+    @Test
+    void badDatesAreRejectedBeforeAnyCustomerIsCreated() {
+        GoogleIdentity maria = new GoogleIdentity("google-123", "maria@gmail.com", "Maria Santos");
+        assertThatThrownBy(() -> bookingService.createForCustomer(
+                new CustomerBookingRequest(1L, "0917", end, start, null, null, null, null), maria))
+                .isInstanceOf(InvalidRequestException.class);
+        verify(customerService, never()).findOrCreateFromGoogle(any(), any());
     }
 
     @Test

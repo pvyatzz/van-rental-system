@@ -51,10 +51,12 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() // CORS preflight
-                        .requestMatchers(HttpMethod.POST, "/api/auth/login").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/auth/login", "/api/auth/google").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/vehicles", "/api/vehicles/*").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/bookings/availability", "/api/bookings/ref/*").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/customers", "/api/bookings").permitAll()
+                        // Customers (signed in with Google) can book and see their own bookings
+                        .requestMatchers(HttpMethod.POST, "/api/bookings").hasRole("CUSTOMER")
+                        .requestMatchers(HttpMethod.GET, "/api/bookings/mine").hasRole("CUSTOMER")
                         .requestMatchers("/error").permitAll()
                         .anyRequest().hasRole("ADMIN"))
                 // Read "Authorization: Bearer <token>", verify its signature and expiry

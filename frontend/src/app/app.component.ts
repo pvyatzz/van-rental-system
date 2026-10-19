@@ -14,6 +14,9 @@ export class AppComponent {
   private readonly router = inject(Router);
 
   logout(): void {
+    if (this.auth.isCustomer() && typeof google !== 'undefined') {
+      google.accounts.id.disableAutoSelect(); // don't silently sign the same Google account back in
+    }
     this.auth.logout();
     this.router.navigate(['/vehicles']);
   }

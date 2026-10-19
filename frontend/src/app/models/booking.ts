@@ -1,10 +1,13 @@
 // Mirrors the backend DTOs in com.vanrental.backend.dto
 export type BookingStatus = 'PENDING' | 'CONFIRMED' | 'CANCELLED' | 'COMPLETED';
 
-/** What we send: BookingRequest. Dates are 'YYYY-MM-DD' strings. */
+/**
+ * What a signed-in customer sends (CustomerBookingRequest). Dates are 'YYYY-MM-DD' strings.
+ * No customer id or name: the backend takes those from the Google sign-in.
+ */
 export interface BookingRequest {
   vehicleId: number;
-  customerId: number;
+  contactNumber: string;
   startDate: string;
   endDate: string;
   purpose: string | null;

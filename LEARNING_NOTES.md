@@ -652,6 +652,56 @@ The confirmation page and the admin table show the address and a **Google Maps l
 
 ---
 
+## Phase 7.1: Customers sign in with Google
+
+Customers must **Sign in with Google** before booking. Their name and email come from Google, so the booking emails always reach a real inbox. The admin keeps the username/password login.
+
+### How it works
+```
+Browser: Google's button → user signs in at Google → Google gives the page an ID token (a JWT signed by Google)
+   → POST /api/auth/google { credential }
+Backend: GoogleTokenVerifier checks Google's signature + issuer + audience + expiry + email_verified
+   → issues OUR OWN token with role CUSTOMER (subject = Google's user id)
+Browser: sends our token with every request, like the admin token
+```
+- **Why not just trust the browser?** Anything the browser says can be faked with dev tools. Only a token **signed by Google** (checked against Google's public keys at `googleapis.com/oauth2/v3/certs`) proves who the user is.
+- **Audience check:** the token must be made for *your* Client ID. Without it, a token someone got from *another* website's Google login would work on yours.
+- **Why exchange it for our own token?** Google ID tokens expire in about an hour and carry no roles. Ours carries `roles: ["CUSTOMER"]`, which `SecurityConfig` checks with `hasRole("CUSTOMER")`.
+- **Google user id (`sub`), not email, is the key:** emails can change, the id never does. `Customer.googleId` links the record; an older customer row with the same email gets linked on first sign-in.
+
+### Backend changes
+- `security/GoogleTokenVerifier.java`: `NimbusJwtDecoder.withJwkSetUri(Google's keys)` plus custom validators for issuer and audience. No Client ID set → 503 "not set up yet".
+- `POST /api/auth/google` (public), `POST /api/bookings` (**CUSTOMER only**), `GET /api/bookings/mine` (CUSTOMER), `POST /api/customers` (now admin only).
+- `@AuthenticationPrincipal Jwt jwt` in a controller method gives you the verified token of whoever is calling, so `jwt.getSubject()` is the Google id. The customer is **never** taken from the request body, so nobody can book in someone else's name.
+- `CustomerBookingRequest` has no `customerId` or name, only `contactNumber`. The customer is created or updated **in the same transaction** as the booking: if the dates turn out to be taken, no half-made customer is left behind. That fixes the Phase 4 limitation.
+- **401 vs 403:** 401 means "who are you? (no or invalid token)"; 403 means "I know who you are, but you're not allowed". An admin calling `/api/bookings/mine` gets 403; a customer calling admin pages gets 403.
+
+### Frontend changes
+- `index.html` loads Google's script (`accounts.google.com/gsi/client`). `src/google-gsi.d.ts` declares the few functions we use so TypeScript knows them (a `.d.ts` file = types only, no code).
+- `auth/google-sign-in-button.component.ts`: `google.accounts.id.initialize({ client_id, callback })` + `renderButton(...)`. Google calls the callback **outside Angular's zone**, so `zone.run(...)` steps back in. The script loads asynchronously, so the component waits for it, gives up after about 10 seconds, and shows a message (ad blockers sometimes block it).
+- `AuthService` now has `roles`: `isAdmin()` / `isCustomer()`. One session at a time. Old saved sessions without roles are ignored.
+- `customerGuard` sends `/book` and `/my-bookings` to `/signin?returnUrl=...`; after signing in you come back to the van you picked.
+- The booking form shows "Booking as Maria Santos · maria@gmail.com" and only asks for a **contact number**.
+- New pages: `/signin`, `/my-bookings`. The header shows **My bookings** and **Sign out** for customers.
+- On sign out, `google.accounts.id.disableAutoSelect()` stops Google from silently signing the same account back in.
+
+### Setting up Google (one time, about 10 minutes)
+1. Go to **console.cloud.google.com** → create a project (e.g. "Van Rental").
+2. **APIs & Services → OAuth consent screen**: user type **External**, app name, your email. Add yourself (and testers) as test users while the app is in "Testing".
+3. **APIs & Services → Credentials → Create credentials → OAuth client ID** → type **Web application**.
+4. **Authorized JavaScript origins:** add `http://localhost:4200` **and** `http://localhost` (Google requires both for local testing). Later add your real https address.
+5. Copy the **Client ID** (ends in `.apps.googleusercontent.com`; it's not a secret) into **both**:
+   - `frontend/src/environments/environment.ts` → `googleClientId: '...'`
+   - the backend: environment variable `GOOGLE_CLIENT_ID` (or the default in `application.properties`)
+
+### How it was tested
+- `GoogleTokenVerifierTest` (7): plays "Google" with its own RSA key. A valid token passes; a wrong audience, wrong issuer, expired token, unverified email or garbage are all **rejected**; no Client ID → 503.
+- `GoogleSignInTest`: `/api/auth/google` → CUSTOMER token → `/mine` works (`@MockitoBean` replaces the verifier).
+- `SecurityTest`: anonymous booking 401, admin on `/mine` 403, customer on admin pages 403.
+- Browser (15 checks), using a locally signed customer token (a real Google login can't be automated): redirect to sign-in with returnUrl; Google name and email on the form; booking linked to the Google account; second booking reuses the customer; another customer sees an empty `/mine`; a customer can't open admin; sign out.
+
+---
+
 ## Before going online (deployment checklist)
 Everything so far runs on your computer. Before deploying (Render, Railway, a VPS):
 1. **Secrets out of the code:** the database password, `ADMIN_PASSWORD` and `JWT_SECRET` become environment variables on the server. Never use the `admin123` / dev secret defaults online.

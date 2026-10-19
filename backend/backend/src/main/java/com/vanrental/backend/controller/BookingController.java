@@ -4,11 +4,15 @@ import com.vanrental.backend.dto.AvailabilityResponse;
 import com.vanrental.backend.dto.BookingRequest;
 import com.vanrental.backend.dto.BookingResponse;
 import com.vanrental.backend.dto.BookingStatusUpdate;
+import com.vanrental.backend.dto.CustomerBookingRequest;
 import com.vanrental.backend.model.BookingStatus;
+import com.vanrental.backend.security.GoogleIdentity;
 import com.vanrental.backend.service.BookingService;
 import jakarta.validation.Valid;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
@@ -56,14 +60,29 @@ public class BookingController {
         return bookingService.checkAvailability(vehicleId, startDate, endDate);
     }
 
+    /**
+     * A signed-in customer books (SecurityConfig: role CUSTOMER).
+     * {@code @AuthenticationPrincipal Jwt} is our verified login token; its subject is the Google user id.
+     */
     @PostMapping
-    public ResponseEntity<BookingResponse> create(@Valid @RequestBody BookingRequest request) {
-        BookingResponse created = bookingService.create(request);
-        URI location = ServletUriComponentsBuilder.fromCurrentRequest()
-                .path("/{id}")
-                .buildAndExpand(created.id())
+    public ResponseEntity<BookingResponse> create(@Valid @RequestBody CustomerBookingRequest request,
+                                                  @AuthenticationPrincipal Jwt jwt) {
+        BookingResponse created = bookingService.createForCustomer(request, identityOf(jwt));
+        URI location = ServletUriComponentsBuilder.fromCurrentContextPath()
+                .path("/api/bookings/ref/{reference}")
+                .buildAndExpand(created.reference())
                 .toUri();
         return ResponseEntity.created(location).body(created);
+    }
+
+    /** The signed-in customer's own bookings */
+    @GetMapping("/mine")
+    public List<BookingResponse> mine(@AuthenticationPrincipal Jwt jwt) {
+        return bookingService.findMine(jwt.getSubject());
+    }
+
+    private static GoogleIdentity identityOf(Jwt jwt) {
+        return new GoogleIdentity(jwt.getSubject(), jwt.getClaimAsString("email"), jwt.getClaimAsString("name"));
     }
 
     @PutMapping("/{id}")

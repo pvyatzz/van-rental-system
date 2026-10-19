@@ -6,10 +6,9 @@ import { Router } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Observable, catchError, debounceTime, distinctUntilChanged, map, of, startWith, switchMap, tap } from 'rxjs';
 
-import { Customer, NewCustomer } from '../../models/customer';
+import { AuthService } from '../../auth/auth.service';
 import { Vehicle } from '../../models/vehicle';
 import { BookingService } from '../../services/booking.service';
-import { CustomerService } from '../../services/customer.service';
 import { VehicleService } from '../../services/vehicle.service';
 import { rentalDays, todayIso } from '../../shared/dates';
 import { PickupMapComponent, PickupPoint } from '../../shared/pickup-map/pickup-map.component';
@@ -42,8 +41,9 @@ export class BookingFormComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly router = inject(Router);
   private readonly vehicleService = inject(VehicleService);
-  private readonly customerService = inject(CustomerService);
   private readonly bookingService = inject(BookingService);
+  /** The signed-in customer (name + email from Google), shown at the top of the form */
+  protected readonly auth = inject(AuthService);
 
   /** Filled from the URL query string (?vehicleId=2) thanks to withComponentInputBinding() */
   readonly vehicleId = input<string>();
@@ -54,9 +54,6 @@ export class BookingFormComponent implements OnInit {
   readonly submitting = signal(false);
   readonly submitError = signal<string | null>(null);
 
-  /** Remembered so a retry (e.g. after picking new dates) doesn't create the same customer twice */
-  private savedCustomer: Customer | null = null;
-
   readonly form = this.fb.nonNullable.group({
     vehicleId: [0, [Validators.required, Validators.min(1)]],
     dates: this.fb.nonNullable.group(
@@ -66,11 +63,8 @@ export class BookingFormComponent implements OnInit {
       },
       { validators: dateRangeValidator }
     ),
-    customer: this.fb.nonNullable.group({
-      fullName: ['', [Validators.required, Validators.maxLength(100)]],
-      contactNumber: ['', [Validators.required, Validators.maxLength(20)]],
-      email: ['', [Validators.email, Validators.maxLength(100)]]
-    }),
+    // Name and email come from Google; we only need a number to call or text
+    contactNumber: ['', [Validators.required, Validators.maxLength(20)]],
     purpose: ['', Validators.maxLength(255)],
     // Optional pickup location: typed address and/or a pin from the map
     pickup: this.fb.nonNullable.group({
@@ -138,25 +132,17 @@ export class BookingFormComponent implements OnInit {
     this.submitError.set(null);
 
     const value = this.form.getRawValue();
-    const customer: NewCustomer = {
-      fullName: value.customer.fullName.trim(),
-      contactNumber: value.customer.contactNumber.trim(),
-      email: value.customer.email.trim() || null
-    };
-
-    // Two requests in sequence: create the customer, then the booking that references them
-    this.getOrCreateCustomer(customer).pipe(
-      switchMap(saved => this.bookingService.create({
-        vehicleId: value.vehicleId,
-        customerId: saved.id,
-        startDate: value.dates.startDate,
-        endDate: value.dates.endDate,
-        purpose: value.purpose.trim() || null,
-        pickupAddress: value.pickup.address.trim() || null,
-        pickupLatitude: value.pickup.latitude,
-        pickupLongitude: value.pickup.longitude
-      }))
-    ).subscribe({
+    // One request: the backend links the booking to the signed-in Google account
+    this.bookingService.create({
+      vehicleId: value.vehicleId,
+      contactNumber: value.contactNumber.trim(),
+      startDate: value.dates.startDate,
+      endDate: value.dates.endDate,
+      purpose: value.purpose.trim() || null,
+      pickupAddress: value.pickup.address.trim() || null,
+      pickupLatitude: value.pickup.latitude,
+      pickupLongitude: value.pickup.longitude
+    }).subscribe({
       next: booking => this.router.navigate(['/bookings', booking.reference]),
       error: err => {
         this.submitting.set(false);
@@ -195,14 +181,5 @@ export class BookingFormComponent implements OnInit {
       map(result => (result.available ? 'available' : 'unavailable') as AvailabilityState),
       catchError(() => of('error' as AvailabilityState))
     );
-  }
-
-  private getOrCreateCustomer(customer: NewCustomer): Observable<Customer> {
-    const saved = this.savedCustomer;
-    if (saved && saved.fullName === customer.fullName
-        && saved.contactNumber === customer.contactNumber && saved.email === customer.email) {
-      return of(saved);
-    }
-    return this.customerService.create(customer).pipe(tap(created => (this.savedCustomer = created)));
   }
 }

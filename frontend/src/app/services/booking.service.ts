@@ -30,8 +30,14 @@ export class BookingService {
     return this.http.get<Booking>(`${this.baseUrl}/ref/${encodeURIComponent(reference)}`);
   }
 
+  /** Signed-in customer only (the auth interceptor adds the token) */
   create(request: BookingRequest): Observable<Booking> {
     return this.http.post<Booking>(this.baseUrl, request);
+  }
+
+  /** The signed-in customer's own bookings */
+  mine(): Observable<Booking[]> {
+    return this.http.get<Booking[]>(`${this.baseUrl}/mine`);
   }
 
   changeStatus(id: number, status: BookingStatus): Observable<Booking> {
