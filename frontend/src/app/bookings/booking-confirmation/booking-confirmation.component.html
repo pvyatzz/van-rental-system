@@ -1,98 +1,55 @@
-<section class="page">
+<section class="container page narrow">
   @if (booking(); as b) {
-    <!-- The page is also opened later from "My bookings", so the banner follows the current state -->
+    <!-- Status banner: the page is also reopened later from "My bookings", so it follows the current state -->
     @switch (b.status) {
       @case ('CONFIRMED') {
-        <div class="banner">
-          <h1>Booking confirmed</h1>
-          <p>See you on {{ b.startDate | date: 'EEE, MMM d' }}, {{ b.customerName }}!</p>
+        <div class="banner success">
+          <span class="banner-icon"><app-icon name="check-circle" [size]="28" /></span>
+          <div><h1>Booking confirmed</h1><p>See you on {{ b.startDate | date: 'EEEE, MMM d' }}, {{ b.customerName }}!</p></div>
         </div>
       }
       @case ('CANCELLED') {
-        <div class="banner neutral"><h1>Booking cancelled</h1></div>
+        <div class="banner neutral">
+          <span class="banner-icon"><app-icon name="x" [size]="28" /></span>
+          <div><h1>Booking cancelled</h1><p>Contact us if you have any questions.</p></div>
+        </div>
       }
       @case ('COMPLETED') {
-        <div class="banner neutral"><h1>Trip completed</h1><p>Thank you for renting with us.</p></div>
+        <div class="banner neutral">
+          <span class="banner-icon"><app-icon name="check" [size]="28" /></span>
+          <div><h1>Trip completed</h1><p>Thank you for renting with us.</p></div>
+        </div>
       }
       @default {
         @if (b.paymentStatus === 'REJECTED') {
           <div class="banner warn">
-            <h1>Please check your down payment</h1>
-            <p>We couldn't confirm your payment from the screenshot you sent. Please upload a new one below.</p>
+            <span class="banner-icon"><app-icon name="alert" [size]="28" /></span>
+            <div>
+              <h1>Please check your down payment</h1>
+              <p>We couldn't confirm your payment from the screenshot you sent. Please upload a new one below.</p>
+            </div>
           </div>
         } @else {
-          <div class="banner">
-            <h1>Booking request received</h1>
-            <p>
-              Thank you, {{ b.customerName }}! We'll check your down payment and confirm your booking. We'll email
-              <strong>{{ b.customerEmail }}</strong> and may call <strong>{{ b.customerContactNumber }}</strong>.
-            </p>
+          <div class="banner info">
+            <span class="banner-icon"><app-icon name="clock" [size]="28" /></span>
+            <div>
+              <h1>Booking request received</h1>
+              <p>Thank you, {{ b.customerName }}! We'll check your down payment and confirm your booking by email at
+                <strong>{{ b.customerEmail }}</strong>.</p>
+            </div>
           </div>
         }
       }
     }
-    <p class="keep">Keep your reference <strong>{{ b.reference }}</strong>. You can reopen this page anytime from
-      <a routerLink="/my-bookings">My bookings</a>.</p>
-
-    <dl class="summary">
-      <dt>Reference</dt>
-      <dd><strong class="reference">{{ b.reference }}</strong></dd>
-
-      <dt>Status</dt>
-      <dd><span class="badge" [attr.data-status]="b.status">{{ b.status }}</span></dd>
-
-      <dt>Van</dt>
-      <dd>{{ b.vehicleModel }} #{{ b.vehicleId }}</dd>
-
-      <dt>Pick-up</dt>
-      <dd>{{ b.startDate | date: 'EEE, MMM d, y' }}</dd>
-
-      <dt>Return</dt>
-      <dd>{{ b.endDate | date: 'EEE, MMM d, y' }}</dd>
-
-      <dt>Duration</dt>
-      <dd>{{ days() }} {{ days() === 1 ? 'day' : 'days' }}</dd>
-
-      @if (b.purpose) {
-        <dt>Purpose</dt>
-        <dd>{{ b.purpose }}</dd>
-      }
-
-      @if (b.pickupAddress || b.pickupLatitude !== null) {
-        <dt>Pickup</dt>
-        <dd>
-          {{ b.pickupAddress }}
-          @if (b.pickupLatitude !== null && b.pickupLongitude !== null) {
-            <a class="map-link" [href]="mapUrl(b.pickupLatitude, b.pickupLongitude)" target="_blank" rel="noopener">
-              View pin on map
-            </a>
-          }
-        </dd>
-      }
-
-      <dt>Total</dt>
-      <dd class="total">{{ b.totalPrice | currency: 'PHP' : 'symbol' : '1.0-2' }}</dd>
-
-      @if (b.downPayment !== null) {
-        <dt>Down payment</dt>
-        <dd>
-          {{ b.downPayment | currency: 'PHP' : 'symbol' : '1.0-2' }}
-          <span class="pay" [attr.data-payment]="b.paymentStatus">{{ paymentLabel(b) }}</span>
-        </dd>
-
-        <dt>Balance at pickup</dt>
-        <dd>{{ b.balanceDue | currency: 'PHP' : 'symbol' : '1.0-2' }}</dd>
-      }
-    </dl>
 
     <!-- Re-upload after a rejection (only the customer who booked can do this; the server checks) -->
     @if (b.status === 'PENDING' && b.paymentStatus === 'REJECTED' && auth.isCustomer()) {
-      <section class="reupload">
-        <h2>Upload a new proof of payment</h2>
+      <section class="card card-pad reupload">
+        <h2 class="card-title"><app-icon name="upload" [size]="20" /> Upload a new proof of payment</h2>
         <p>Make sure the screenshot shows the amount, the date and the reference number of the transfer.</p>
         <app-proof-upload (fileChange)="newProof.set($event)" />
         @if (reuploadError()) {
-          <p class="error" role="alert">{{ reuploadError() }}</p>
+          <p class="alert" role="alert">{{ reuploadError() }}</p>
         }
         <button type="button" class="btn" [disabled]="!newProof() || uploading()" (click)="reupload(b)">
           {{ uploading() ? 'Uploading…' : 'Send new proof' }}
@@ -100,11 +57,78 @@
       </section>
     }
 
-    <a class="btn" routerLink="/vehicles">Back to vans</a>
+    <div class="grid">
+      <section class="card card-pad">
+        <div class="ref-row">
+          <div>
+            <span class="label-sm">Reference</span>
+            <strong class="reference">{{ b.reference }}</strong>
+          </div>
+          <span class="badge" [attr.data-status]="b.status">{{ b.status }}</span>
+        </div>
+
+        <dl class="summary">
+          <dt><app-icon name="van" [size]="16" /> Van</dt>
+          <dd>{{ b.vehicleModel }} #{{ b.vehicleId }}</dd>
+
+          <dt><app-icon name="calendar" [size]="16" /> Pick-up</dt>
+          <dd>{{ b.startDate | date: 'EEE, MMM d, y' }}</dd>
+
+          <dt><app-icon name="calendar" [size]="16" /> Return</dt>
+          <dd>{{ b.endDate | date: 'EEE, MMM d, y' }} · {{ days() }} {{ days() === 1 ? 'day' : 'days' }}</dd>
+
+          @if (b.purpose) {
+            <dt>Purpose</dt>
+            <dd>{{ b.purpose }}</dd>
+          }
+
+          @if (b.pickupAddress || b.pickupLatitude !== null) {
+            <dt><app-icon name="map-pin" [size]="16" /> Pickup</dt>
+            <dd>
+              {{ b.pickupAddress }}
+              @if (b.pickupLatitude !== null && b.pickupLongitude !== null) {
+                <a class="map-link" [href]="mapUrl(b.pickupLatitude, b.pickupLongitude)" target="_blank" rel="noopener">
+                  View pin on map
+                </a>
+              }
+            </dd>
+          }
+        </dl>
+      </section>
+
+      <section class="card card-pad payment">
+        <h2 class="card-title"><app-icon name="wallet" [size]="20" /> Payment</h2>
+        <dl class="money">
+          <div class="total"><dt>Total</dt><dd>{{ b.totalPrice | currency: 'PHP' : 'symbol' : '1.0-2' }}</dd></div>
+          @if (b.downPayment !== null) {
+            <div>
+              <dt>Down payment</dt>
+              <dd>{{ b.downPayment | currency: 'PHP' : 'symbol' : '1.0-2' }}</dd>
+            </div>
+            <div class="pay-state">
+              <span class="badge" [attr.data-payment]="b.paymentStatus">{{ paymentLabel(b) }}</span>
+            </div>
+            <div><dt>Balance at pickup</dt><dd>{{ b.balanceDue | currency: 'PHP' : 'symbol' : '1.0-2' }}</dd></div>
+          }
+        </dl>
+      </section>
+    </div>
+
+    <p class="keep">Keep your reference <strong>{{ b.reference }}</strong>. You can reopen this page anytime from
+      <a routerLink="/my-bookings">My bookings</a>.</p>
+
+    <div class="actions">
+      <a class="btn btn-secondary" routerLink="/my-bookings">My bookings</a>
+      <a class="btn" routerLink="/vehicles">Back to vans</a>
+    </div>
   } @else if (error()) {
-    <p class="error">{{ error() }}</p>
-    <a routerLink="/vehicles">← Back to vans</a>
+    <div class="card empty-state">
+      <h2>Booking not found</h2>
+      <p class="error">{{ error() }}</p>
+      <a class="btn" routerLink="/vehicles">Back to vans</a>
+    </div>
   } @else {
-    <p>Loading booking…</p>
+    <div class="skeleton" style="height: 96px; margin-bottom: 16px"></div>
+    <div class="skeleton" style="height: 240px"></div>
   }
 </section>

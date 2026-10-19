@@ -1,35 +1,75 @@
-<section class="vehicles">
-  <h1>Our Vans</h1>
+<!-- Hero -->
+<section class="hero">
+  <div class="container hero-inner">
+    <div class="hero-text">
+      <span class="eyebrow">Book online in minutes</span>
+      <h1>Comfortable vans for every trip</h1>
+      <p>Family outings, company events or moving cargo — pick a van, choose your dates and reserve it with a
+        ₱500 GCash down payment.</p>
+      <div class="hero-actions">
+        <a class="btn btn-light btn-lg" routerLink="/book">Book a van <app-icon name="arrow-right" [size]="18" /></a>
+        <button type="button" class="btn btn-lg hero-secondary" (click)="scrollToFleet()">See our vans</button>
+      </div>
+      <ul class="hero-points">
+        <li><app-icon name="check-circle" [size]="18" /> Live availability</li>
+        <li><app-icon name="wallet" [size]="18" /> ₱500 to reserve</li>
+        <li><app-icon name="map-pin" [size]="18" /> Pickup where you are</li>
+      </ul>
+    </div>
+    <img class="hero-van" src="/images/l300-fb.png" alt="" />
+  </div>
+</section>
+
+<!-- Fleet -->
+<section class="container page" id="fleet" #fleet>
+  <div class="page-header">
+    <span class="eyebrow">Our fleet</span>
+    <h1>Choose your van</h1>
+    <p>Prices are per day. The down payment is part of the total, not an extra fee.</p>
+  </div>
 
   @if (loading()) {
-    <p class="state">Loading vehicles…</p>
+    <div class="grid">
+      @for (i of [1, 2, 3]; track i) {
+        <div class="card van-card"><div class="skeleton media-skeleton"></div><div class="skeleton line"></div></div>
+      }
+    </div>
   } @else if (error()) {
-    <div class="state error">
+    <div class="card empty-state">
+      <h2>Couldn't load the vans</h2>
       <p>{{ error() }}</p>
-      <button type="button" (click)="load()">Try again</button>
+      <button type="button" class="btn" (click)="load()">Try again</button>
     </div>
   } @else if (vehicles().length === 0) {
-    <p class="state">No vehicles yet.</p>
+    <div class="card empty-state"><h2>No vans yet</h2><p>Please check back soon.</p></div>
   } @else {
     <div class="grid">
       @for (vehicle of vehicles(); track vehicle.id) {
-        <article class="card">
-          @if (vehicle.photoUrl) {
-            <img [src]="vehicle.photoUrl" [alt]="vehicle.model" />
-          } @else {
-            <div class="photo-placeholder">No photo</div>
-          }
+        <article class="card van-card">
+          <div class="media">
+            @if (vehicle.photoUrl) {
+              <img [src]="vehicle.photoUrl" [alt]="vehicle.model" />
+            } @else {
+              <app-icon name="van" [size]="48" />
+            }
+            <span class="badge" [attr.data-vehicle]="vehicle.status">{{ statusLabels[vehicle.status] }}</span>
+          </div>
           <div class="body">
             <h2>{{ vehicle.model }}</h2>
-            <p>Seats: {{ vehicle.capacity }}</p>
-            <p class="rate">{{ vehicle.ratePerDay | currency: 'PHP' : 'symbol' : '1.0-2' }} / day</p>
-            <span class="badge" [class]="'badge ' + vehicle.status.toLowerCase()">
-              {{ statusLabels[vehicle.status] }}
-            </span>
+            <div class="specs">
+              <span><app-icon name="users" [size]="16" /> {{ vehicle.capacity }} seats</span>
+              <span>{{ vehicle.capacity >= 10 ? 'Passenger van' : 'Cargo van' }}</span>
+            </div>
+            <div class="price">
+              <strong>{{ vehicle.ratePerDay | currency: 'PHP' : 'symbol' : '1.0-0' }}</strong>
+              <span>/ day</span>
+            </div>
             @if (vehicle.status === 'UNDER_MAINTENANCE') {
-              <span class="btn disabled book">Not bookable right now</span>
+              <span class="btn btn-block disabled book">Not bookable right now</span>
             } @else {
-              <a class="btn book" routerLink="/book" [queryParams]="{ vehicleId: vehicle.id }">Book this van</a>
+              <a class="btn btn-block book" routerLink="/book" [queryParams]="{ vehicleId: vehicle.id }">
+                Book this van
+              </a>
             }
           </div>
         </article>

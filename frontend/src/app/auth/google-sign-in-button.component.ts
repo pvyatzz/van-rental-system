@@ -17,13 +17,13 @@ import { AuthService } from './auth.service';
     } @else {
       <div #buttonHost class="button-host"></div>
       @if (busy()) { <p class="note">Signing you in…</p> }
-      @if (error()) { <p class="error" role="alert">{{ error() }}</p> }
+      @if (error()) { <p class="alert" role="alert">{{ error() }}</p> }
     }
   `,
   styles: `
     .button-host { min-height: 44px; display: flex; justify-content: center; }
-    .note { color: #666; font-size: 0.9rem; text-align: center; }
-    .error { background: #fde8e7; color: #b3261e; padding: 10px 12px; border-radius: 6px; }
+    .note { color: var(--c-text-3); font-size: 0.9rem; text-align: center; margin: 8px 0 0; }
+    .alert { margin: 12px 0 0; }
   `
 })
 export class GoogleSignInButtonComponent implements AfterViewInit {
@@ -52,7 +52,10 @@ export class GoogleSignInButtonComponent implements AfterViewInit {
         // Google calls this outside Angular's zone, so step back in to update the page
         callback: response => this.zone.run(() => this.onCredential(response.credential))
       });
-      google.accounts.id.renderButton(host, { theme: 'outline', size: 'large', text: 'signin_with', shape: 'pill' });
+      google.accounts.id.renderButton(host, {
+        theme: 'outline', size: 'large', text: 'continue_with', shape: 'pill',
+        width: Math.min(360, host.clientWidth || 360) // Google's button takes a fixed pixel width
+      });
       return;
     }
     if (attempt > 50) { // ~10 seconds

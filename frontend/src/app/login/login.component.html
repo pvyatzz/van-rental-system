@@ -1,19 +1,57 @@
-<section class="page">
-  <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
-    <h1>Admin login</h1>
+<div class="auth-page">
+  <!-- Left: brand panel (hidden on phones) -->
+  <aside class="auth-aside">
+    <div class="aside-content">
+      <span class="eyebrow light">Van Rental</span>
+      <h2>Your next trip starts here.</h2>
+      <p>Comfortable vans for family outings, company events and cargo — booked online in minutes.</p>
+      <ul>
+        <li><app-icon name="shield" [size]="18" /> Secure sign-in with your Google account</li>
+        <li><app-icon name="wallet" [size]="18" /> ₱500 down payment via GCash / InstaPay</li>
+        <li><app-icon name="check-circle" [size]="18" /> Email updates when your booking is confirmed</li>
+      </ul>
+      <img src="/images/l300-fb.png" alt="" class="aside-van" />
+    </div>
+  </aside>
 
-    <label for="username">Username</label>
-    <input id="username" formControlName="username" autocomplete="username" />
+  <!-- Right: the sign-in card -->
+  <section class="auth-main">
+    <div class="auth-card card">
+      <span class="brand-mark"><app-icon name="van" [size]="22" /></span>
+      <h1>Sign in</h1>
+      <p class="lead">Customers sign in with Google to book a van and follow their bookings.</p>
 
-    <label for="password">Password</label>
-    <input id="password" type="password" formControlName="password" autocomplete="current-password" />
+      <app-google-sign-in-button (signedIn)="afterGoogleSignIn()" />
 
-    @if (error()) {
-      <p class="error" role="alert">{{ error() }}</p>
-    }
+      <div class="divider"><span>Staff only</span></div>
 
-    <button type="submit" class="btn" [disabled]="submitting()">
-      {{ submitting() ? 'Logging in…' : 'Log in' }}
-    </button>
-  </form>
-</section>
+      <!-- Admin login: same page, tucked away so customers aren't confused -->
+      <details class="admin" [open]="adminOpen()">
+        <summary>
+          <app-icon name="lock" [size]="16" />
+          <span>Admin sign-in</span>
+        </summary>
+
+        <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+          <div class="field">
+            <label for="username">Username</label>
+            <input id="username" formControlName="username" autocomplete="username" />
+          </div>
+          <div class="field">
+            <label for="password">Password</label>
+            <input id="password" type="password" formControlName="password" autocomplete="current-password" />
+          </div>
+
+          @if (error()) {
+            <p class="alert" role="alert"><app-icon name="alert" [size]="18" /> {{ error() }}</p>
+          }
+
+          <button type="submit" class="btn btn-block" [disabled]="submitting()">
+            {{ submitting() ? 'Signing in…' : 'Sign in as admin' }}
+          </button>
+        </form>
+      </details>
+    </div>
+    <p class="fine-print">We only see your name and email address. We never post anything to your account.</p>
+  </section>
+</div>

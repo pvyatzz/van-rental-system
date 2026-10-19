@@ -1,11 +1,11 @@
 @if (error()) {
   <p class="alert" role="alert">{{ error() }}</p>
 } @else if (loading()) {
-  <p class="muted">Loading vans…</p>
+  <div class="skeleton" style="height: 120px"></div>
 } @else {
   <div class="list">
     @for (vehicle of vehicles(); track vehicle.id) {
-      <article class="van" [class.editing]="editingId() === vehicle.id">
+      <article class="card van" [class.editing]="editingId() === vehicle.id">
         @if (editingId() === vehicle.id) {
           <!-- Edit mode -->
           <form [formGroup]="editForm" (ngSubmit)="save()" novalidate>
@@ -61,7 +61,7 @@
             }
             <div class="buttons">
               <button type="submit" class="btn" [disabled]="saving()">{{ saving() ? 'Saving…' : 'Save' }}</button>
-              <button type="button" class="secondary" (click)="cancelEdit()" [disabled]="saving()">Cancel</button>
+              <button type="button" class="btn btn-secondary secondary" (click)="cancelEdit()" [disabled]="saving()">Cancel</button>
             </div>
           </form>
         } @else {
@@ -74,12 +74,12 @@
           <div class="info">
             <h2>{{ vehicle.model }} <span class="muted">#{{ vehicle.id }}</span></h2>
             <p>{{ vehicle.capacity }} seats · {{ vehicle.ratePerDay | currency: 'PHP' : 'symbol' : '1.0-2' }} / day</p>
-            <span class="status" [attr.data-status]="vehicle.status">{{ statusLabel(vehicle.status) }}</span>
+            <span class="badge" [attr.data-vehicle]="vehicle.status">{{ statusLabel(vehicle.status) }}</span>
             @if (savedId() === vehicle.id) {
-              <span class="saved">✓ Saved</span>
+              <span class="saved"><app-icon name="check" [size]="14" /> Saved</span>
             }
           </div>
-          <button type="button" class="secondary" (click)="startEdit(vehicle)" [disabled]="editingId() !== null">
+          <button type="button" class="btn btn-secondary btn-sm secondary" (click)="startEdit(vehicle)" [disabled]="editingId() !== null">
             Edit
           </button>
         }

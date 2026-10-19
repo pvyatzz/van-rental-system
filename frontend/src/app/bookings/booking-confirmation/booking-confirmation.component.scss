@@ -1,75 +1,106 @@
-.page {
-  max-width: 640px;
-  margin: 0 auto;
-  padding: 24px 16px 48px;
+.narrow {
+  max-width: 900px;
 }
 
+/* ---------- Status banner ---------- */
+
 .banner {
-  background: #e3f4e6;
-  color: #1e4d29;
-  border-radius: 10px;
-  padding: 16px 18px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
   margin-bottom: 20px;
+  padding: 22px 24px;
+  border-radius: var(--r-lg);
+  border: 1px solid transparent;
 
   h1 {
-    margin: 0 0 6px;
-    font-size: 1.4rem;
+    margin: 0 0 4px;
+    font-size: clamp(1.3rem, 3vw, 1.6rem);
+    font-weight: 800;
   }
 
   p {
     margin: 0;
   }
 
-  &.warn {
-    background: #fdecd6;
-    color: #6b3a00;
-  }
+  &.info { background: var(--c-info-soft); border-color: #bfdbfe; color: var(--c-primary-ink); }
+  &.success { background: var(--c-success-soft); border-color: #bbf7d0; color: #14532d; }
+  &.warn { background: var(--c-warning-soft); border-color: #fde68a; color: #78350f; }
+  &.neutral { background: var(--c-neutral-soft); border-color: var(--c-border); color: var(--c-text-2); }
 
-  &.neutral {
-    background: #eef0f2;
-    color: #333;
-  }
-}
-
-.keep {
-  margin: -8px 0 16px;
-  font-size: 0.9rem;
-  color: #555;
-}
-
-.pay {
-  display: block;
-  font-size: 0.85rem;
-  color: #8a4b00;
-
-  &[data-payment='VERIFIED'] {
-    color: #1e6b2e;
-  }
-
-  &[data-payment='REJECTED'] {
-    color: #b3261e;
+  h1 {
+    color: inherit;
   }
 }
 
-.reupload {
-  background: #fff;
-  border: 1px solid #f0c9a0;
-  border-radius: 10px;
-  padding: 16px 18px;
-  margin-bottom: 20px;
+.banner-icon {
+  display: inline-grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.7);
+}
 
-  h2 {
-    font-size: 1.05rem;
-    margin: 0 0 6px;
+/* ---------- Cards ---------- */
+
+.grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+
+  @media (min-width: 760px) {
+    grid-template-columns: 1.4fr 1fr;
+  }
+}
+
+.ref-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 18px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--c-border);
+
+  div {
+    display: flex;
+    flex-direction: column;
+  }
+}
+
+.label-sm {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--c-text-3);
+}
+
+.reference {
+  font-family: ui-monospace, 'SF Mono', Consolas, monospace;
+  font-size: 1.25rem;
+  letter-spacing: 0.06em;
+}
+
+.summary {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 12px 20px;
+  margin: 0;
+
+  dt {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--c-text-3);
+    font-size: 0.9rem;
   }
 
-  p {
-    margin: 0 0 12px;
-    color: #555;
-  }
-
-  .btn {
-    margin-top: 12px;
+  dd {
+    margin: 0;
+    font-weight: 500;
   }
 }
 
@@ -79,49 +110,71 @@
   font-size: 0.9rem;
 }
 
-.reference {
-  font-family: ui-monospace, Consolas, monospace;
-  letter-spacing: 0.05em;
-}
+.money {
+  margin: 0;
 
-.summary {
-  display: grid;
-  grid-template-columns: max-content 1fr;
-  gap: 10px 20px;
-  background: #fff;
-  border: 1px solid #e3e3e3;
-  border-radius: 10px;
-  padding: 16px 18px;
-  margin: 0 0 20px;
+  > div {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px dashed var(--c-border);
+  }
 
   dt {
-    color: #666;
+    color: var(--c-text-2);
   }
 
   dd {
     margin: 0;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
   }
 
-  .total {
-    font-weight: 700;
+  .total dt,
+  .total dd {
     font-size: 1.1rem;
+    font-weight: 800;
+    color: var(--c-text);
+  }
+
+  .pay-state {
+    justify-content: flex-end;
+    border-bottom: 0;
+    padding-top: 0;
+  }
+
+  > div:last-child {
+    border-bottom: 0;
   }
 }
 
-.badge {
-  display: inline-block;
-  padding: 2px 10px;
-  border-radius: 999px;
-  font-size: 0.8rem;
-  background: #fdecd6;
-  color: #8a4b00;
+.reupload {
+  margin-bottom: 16px;
+  border-color: #fcd34d;
 
-  &[data-status='CONFIRMED'] {
-    background: #e3f4e6;
-    color: #1e6b2e;
+  p {
+    margin: 0 0 14px;
+    color: var(--c-text-2);
   }
+
+  .btn {
+    margin-top: 14px;
+  }
+}
+
+.keep {
+  margin: 20px 0;
+  color: var(--c-text-2);
+  font-size: 0.92rem;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
 }
 
 .error {
-  color: #b3261e;
+  color: var(--c-danger);
 }

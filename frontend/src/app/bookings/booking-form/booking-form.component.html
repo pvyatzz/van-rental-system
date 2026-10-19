@@ -1,160 +1,182 @@
-<section class="page">
-  <h1>Book a van</h1>
+<section class="container page">
+  <div class="page-header">
+    <span class="eyebrow">New booking</span>
+    <h1>Book a van</h1>
+    <p>Five quick steps. We'll email you as soon as your booking is confirmed.</p>
+  </div>
 
-  <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
-    <!-- 1. Van -->
-    <fieldset>
-      <legend>Van</legend>
-      <label for="vehicle">Choose a van</label>
-      <select id="vehicle" formControlName="vehicleId">
-        <option [ngValue]="0" disabled>Select a van…</option>
-        @for (vehicle of vehicles(); track vehicle.id) {
-          <option [ngValue]="vehicle.id" [disabled]="vehicle.status === 'UNDER_MAINTENANCE'">
-            {{ vehicleLabel(vehicle) }}{{ vehicle.status === 'UNDER_MAINTENANCE' ? ' (under maintenance)' : '' }}
-          </option>
-        }
-      </select>
-      @if (showError('vehicleId')) {
-        <p class="field-error">Please choose a van.</p>
-      }
-
-      @if (selectedVehicle(); as vehicle) {
-        <div class="van-preview">
-          @if (vehicle.photoUrl) {
-            <img [src]="vehicle.photoUrl" [alt]="vehicle.model" />
+  <form class="layout" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+    <div class="steps">
+      <!-- 1. Van -->
+      <section class="card card-pad">
+        <h2 class="card-title"><span class="step">1</span> Choose your van</h2>
+        <label for="vehicle">Van</label>
+        <select id="vehicle" formControlName="vehicleId">
+          <option [ngValue]="0" disabled>Select a van…</option>
+          @for (vehicle of vehicles(); track vehicle.id) {
+            <option [ngValue]="vehicle.id" [disabled]="vehicle.status === 'UNDER_MAINTENANCE'">
+              {{ vehicleLabel(vehicle) }}{{ vehicle.status === 'UNDER_MAINTENANCE' ? ' (under maintenance)' : '' }}
+            </option>
           }
+        </select>
+        @if (showError('vehicleId')) {
+          <p class="field-error">Please choose a van.</p>
+        }
+      </section>
+
+      <!-- 2. Dates + live availability -->
+      <section class="card card-pad" formGroupName="dates">
+        <h2 class="card-title"><span class="step">2</span> Pick your dates</h2>
+        <div class="field-row">
           <div>
-            <strong>{{ vehicle.model }}</strong>
-            <span>{{ vehicle.capacity }} seats · {{ vehicle.ratePerDay | currency: 'PHP' : 'symbol' : '1.0-2' }} / day</span>
+            <label for="startDate">Pick-up date</label>
+            <input id="startDate" type="date" formControlName="startDate" [min]="today" />
+          </div>
+          <div>
+            <label for="endDate">Return date</label>
+            <input id="endDate" type="date" formControlName="endDate"
+                   [min]="form.controls.dates.controls.startDate.value || today" />
           </div>
         </div>
-      }
-    </fieldset>
 
-    <!-- 2. Dates + live availability -->
-    <fieldset formGroupName="dates">
-      <legend>Dates</legend>
-      <div class="row">
-        <div>
-          <label for="startDate">Pick-up date</label>
-          <input id="startDate" type="date" formControlName="startDate" [min]="today" />
-        </div>
-        <div>
-          <label for="endDate">Return date</label>
-          <input id="endDate" type="date" formControlName="endDate"
-                 [min]="form.controls.dates.controls.startDate.value || today" />
-        </div>
-      </div>
-
-      @if (form.controls.dates.hasError('startInPast')) {
-        <p class="field-error">The pick-up date can't be in the past.</p>
-      }
-      @if (form.controls.dates.hasError('endBeforeStart')) {
-        <p class="field-error">The return date must be on or after the pick-up date.</p>
-      }
-
-      <div class="availability" [attr.data-state]="availability()" aria-live="polite">
-        @switch (availability()) {
-          @case ('checking') { Checking availability… }
-          @case ('available') { ✓ Available for these dates }
-          @case ('unavailable') { ✗ Not available for these dates. Please try other dates or another van. }
-          @case ('error') { Couldn't check availability right now. }
-          @default { Pick a van and dates to check availability. }
+        @if (form.controls.dates.hasError('startInPast')) {
+          <p class="field-error">The pick-up date can't be in the past.</p>
         }
-      </div>
+        @if (form.controls.dates.hasError('endBeforeStart')) {
+          <p class="field-error">The return date must be on or after the pick-up date.</p>
+        }
 
-      @if (days() > 0 && selectedVehicle()) {
-        <p class="estimate">
-          {{ days() }} {{ days() === 1 ? 'day' : 'days' }} ×
-          {{ selectedVehicle()!.ratePerDay | currency: 'PHP' : 'symbol' : '1.0-2' }} =
-          <strong>{{ estimatedTotal() | currency: 'PHP' : 'symbol' : '1.0-2' }}</strong>
-          <span class="muted">(estimate)</span>
-        </p>
-      }
-    </fieldset>
-
-    <!-- 3. Customer -->
-    <fieldset>
-      <legend>Your details</legend>
-      <p class="signed-in">
-        Booking as <strong>{{ auth.displayName() }}</strong>
-        <span class="muted">· {{ auth.email() }} (from your Google account; we'll email you here)</span>
-      </p>
-
-      <label for="contactNumber">Contact number</label>
-      <input id="contactNumber" type="tel" formControlName="contactNumber" autocomplete="tel"
-             placeholder="09XX XXX XXXX" />
-      @if (showError('contactNumber')) {
-        <p class="field-error">Please enter a contact number (max 20 characters).</p>
-      }
-    </fieldset>
-
-    <!-- 4. Purpose -->
-    <fieldset>
-      <legend>Trip details</legend>
-      <label for="purpose">Purpose <span class="muted">(optional)</span></label>
-      <textarea id="purpose" formControlName="purpose" rows="3"
-                placeholder="e.g. Family outing to Tagaytay, office event, moving items"></textarea>
-      @if (showError('purpose')) {
-        <p class="field-error">Please keep this under 255 characters.</p>
-      }
-    </fieldset>
-
-    <!-- 5. Pickup location (optional) -->
-    <fieldset formGroupName="pickup">
-      <legend>Pickup location <span class="muted">(optional)</span></legend>
-      <label for="pickupAddress">Address or landmark</label>
-      <input id="pickupAddress" formControlName="address" autocomplete="street-address"
-             placeholder="e.g. SM Megamall, Ortigas, main entrance" />
-      @if (showError('pickup.address')) {
-        <p class="field-error">Please keep this under 255 characters.</p>
-      }
-      <p class="hint">Tap the map to drop a pin where we should pick you up.</p>
-      <app-pickup-map (pointChange)="onPickupPoint($event)" />
-      @if (form.controls.pickup.controls.latitude.value !== null) {
-        <p class="hint">Pin set at {{ form.controls.pickup.controls.latitude.value }},
-          {{ form.controls.pickup.controls.longitude.value }}</p>
-      }
-    </fieldset>
-
-    <!-- 6. Down payment -->
-    <fieldset class="payment" id="bank-acc">
-      <legend>Down payment</legend>
-      <p>
-        To reserve the van, send a <strong>{{ downPayment() | currency: 'PHP' : 'symbol' : '1.0-0' }}</strong> down payment
-        by scanning this QR code with <strong>GCash</strong> or any bank app that supports <strong>InstaPay</strong>.
-        It is part of your total, not an extra fee.
-      </p>
-      <div class="qr-row">
-        <img class="qr" src="/images/gcash-qr.jpg" alt="GCash / InstaPay QR code for the down payment" />
-        <div class="payment-summary">
-          @if (days() > 0 && selectedVehicle()) {
-            <span>Total <strong>{{ estimatedTotal() | currency: 'PHP' : 'symbol' : '1.0-0' }}</strong></span>
-            <span>Down payment now <strong>{{ downPayment() | currency: 'PHP' : 'symbol' : '1.0-0' }}</strong></span>
-            <span>Balance at pickup <strong>{{ estimatedBalance() | currency: 'PHP' : 'symbol' : '1.0-0' }}</strong></span>
+        <div class="availability" [attr.data-state]="availability()" aria-live="polite">
+          @switch (availability()) {
+            @case ('checking') { <app-icon name="clock" [size]="18" /> Checking availability… }
+            @case ('available') { <app-icon name="check-circle" [size]="18" /> Available for these dates }
+            @case ('unavailable') { <app-icon name="alert" [size]="18" /> Not available for these dates. Try other dates or another van. }
+            @case ('error') { <app-icon name="alert" [size]="18" /> Couldn't check availability right now. }
+            @default { <app-icon name="calendar" [size]="18" /> Pick a van and dates to check availability. }
           }
-          <ol>
-            <li>Scan the QR code and send {{ downPayment() | currency: 'PHP' : 'symbol' : '1.0-0' }}.</li>
-            <li>Take a screenshot of the successful transfer.</li>
-            <li>Upload it below and request your booking.</li>
+        </div>
+      </section>
+
+      <!-- 3. Customer -->
+      <section class="card card-pad">
+        <h2 class="card-title"><span class="step">3</span> Your details</h2>
+        <div class="signed-in">
+          <span class="avatar" aria-hidden="true">{{ (auth.displayName() ?? '?').charAt(0).toUpperCase() }}</span>
+          <div>
+            <strong>{{ auth.displayName() }}</strong>
+            <span class="muted">{{ auth.email() }} · from your Google account, we'll email you here</span>
+          </div>
+        </div>
+
+        <label for="contactNumber">Contact number</label>
+        <input id="contactNumber" type="tel" formControlName="contactNumber" autocomplete="tel"
+               placeholder="09XX XXX XXXX" />
+        @if (showError('contactNumber')) {
+          <p class="field-error">Please enter a contact number (max 20 characters).</p>
+        }
+      </section>
+
+      <!-- 4. Trip + pickup (both optional) -->
+      <section class="card card-pad">
+        <h2 class="card-title"><span class="step">4</span> Trip &amp; pickup <span class="muted">(optional)</span></h2>
+        <div class="field">
+          <label for="purpose">Purpose of the trip</label>
+          <textarea id="purpose" formControlName="purpose" rows="2"
+                    placeholder="e.g. Family outing to Tagaytay, office event, moving items"></textarea>
+          @if (showError('purpose')) {
+            <p class="field-error">Please keep this under 255 characters.</p>
+          }
+        </div>
+
+        <div formGroupName="pickup">
+          <label for="pickupAddress">Pickup address or landmark</label>
+          <input id="pickupAddress" formControlName="address" autocomplete="street-address"
+                 placeholder="e.g. SM Megamall, Ortigas, main entrance" />
+          @if (showError('pickup.address')) {
+            <p class="field-error">Please keep this under 255 characters.</p>
+          }
+          <p class="hint"><app-icon name="map-pin" [size]="14" /> Tap the map to drop a pin where we should pick you up.</p>
+          <app-pickup-map (pointChange)="onPickupPoint($event)" />
+          @if (form.controls.pickup.controls.latitude.value !== null) {
+            <p class="hint">Pin set at {{ form.controls.pickup.controls.latitude.value }},
+              {{ form.controls.pickup.controls.longitude.value }}</p>
+          }
+        </div>
+      </section>
+
+      <!-- 5. Down payment -->
+      <section class="card card-pad payment" id="bank-acc">
+        <h2 class="card-title"><span class="step">5</span> Down payment</h2>
+        <p class="payment-intro">
+          Send a <strong>{{ downPayment() | currency: 'PHP' : 'symbol' : '1.0-0' }}</strong> down payment to reserve
+          the van. Scan the QR code with <strong>GCash</strong> or any bank app that supports <strong>InstaPay</strong>.
+          It's part of your total, not an extra fee.
+        </p>
+        <div class="qr-row">
+          <img class="qr" src="/images/gcash-qr.jpg" alt="GCash / InstaPay QR code for the down payment" />
+          <ol class="how">
+            <li><span>1</span> Scan the QR code and send {{ downPayment() | currency: 'PHP' : 'symbol' : '1.0-0' }}.</li>
+            <li><span>2</span> Screenshot the successful transfer.</li>
+            <li><span>3</span> Upload the screenshot below.</li>
           </ol>
         </div>
+
+        <p class="label">Proof of payment</p>
+        <app-proof-upload (fileChange)="onProofChange($event)" />
+        @if (proofMissing()) {
+          <p class="field-error">Please upload a screenshot of your down payment.</p>
+        }
+      </section>
+    </div>
+
+    <!-- Summary (sticky on wide screens) -->
+    <aside class="summary-col">
+      <div class="card summary-card">
+        <h2>Booking summary</h2>
+
+        @if (selectedVehicle(); as vehicle) {
+          <div class="van-preview">
+            @if (vehicle.photoUrl) {
+              <img [src]="vehicle.photoUrl" [alt]="vehicle.model" />
+            }
+            <div>
+              <strong>{{ vehicle.model }}</strong>
+              <span>{{ vehicle.capacity }} seats · {{ vehicle.ratePerDay | currency: 'PHP' : 'symbol' : '1.0-0' }}/day</span>
+            </div>
+          </div>
+        } @else {
+          <p class="muted">Choose a van to see the price.</p>
+        }
+
+        <dl class="lines">
+          <div><dt>Pick-up</dt><dd>{{ (formDates().startDate | date: 'EEE, MMM d') || '—' }}</dd></div>
+          <div><dt>Return</dt><dd>{{ (formDates().endDate | date: 'EEE, MMM d') || '—' }}</dd></div>
+          @if (days() > 0 && selectedVehicle()) {
+            <div class="estimate">
+              <dt>{{ days() }} {{ days() === 1 ? 'day' : 'days' }} × {{ selectedVehicle()!.ratePerDay | currency: 'PHP' : 'symbol' : '1.0-0' }}</dt>
+              <dd>{{ estimatedTotal() | currency: 'PHP' : 'symbol' : '1.0-0' }}</dd>
+            </div>
+            <div class="total"><dt>Total</dt><dd>{{ estimatedTotal() | currency: 'PHP' : 'symbol' : '1.0-0' }}</dd></div>
+            <div><dt>Down payment now</dt><dd>{{ downPayment() | currency: 'PHP' : 'symbol' : '1.0-0' }}</dd></div>
+            <div><dt>Balance at pickup</dt><dd>{{ estimatedBalance() | currency: 'PHP' : 'symbol' : '1.0-0' }}</dd></div>
+          }
+        </dl>
+
+        @if (submitError()) {
+          <p class="alert submit-error" role="alert"><app-icon name="alert" [size]="18" /> {{ submitError() }}</p>
+        }
+
+        <button type="submit" class="btn btn-lg btn-block" [disabled]="submitting() || availability() !== 'available'">
+          {{ submitting() ? 'Sending…' : 'Request booking' }}
+        </button>
+        <p class="fine">
+          @if (availability() !== 'available') {
+            Pick a van and available dates to continue.
+          } @else {
+            We'll check your payment and email you to confirm.
+          }
+        </p>
       </div>
-
-      <p class="proof-label">Proof of payment</p>
-      <app-proof-upload (fileChange)="onProofChange($event)" />
-      @if (proofMissing()) {
-        <p class="field-error">Please upload a screenshot of your down payment.</p>
-      }
-      <p class="hint">We'll check the payment and confirm your booking. If anything is wrong, we'll email you.</p>
-    </fieldset>
-
-    @if (submitError()) {
-      <p class="submit-error" role="alert">{{ submitError() }}</p>
-    }
-
-    <button type="submit" class="btn" [disabled]="submitting() || availability() !== 'available'">
-      {{ submitting() ? 'Sending…' : 'Request booking' }}
-    </button>
+    </aside>
   </form>
 </section>

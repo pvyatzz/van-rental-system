@@ -769,6 +769,52 @@ SUBMITTED (customer uploaded) ──► VERIFIED (admin) ──► booking can b
 
 ---
 
+## Phase 8: Modern UI and one shared login page
+
+### One sign-in page for everyone (`/login`)
+- **Customers:** "Continue with Google" at the top.
+- **Admin:** "Admin sign-in" (username + password) under a "Staff only" divider. It's a `<details>` element (folded away) so customers aren't confused. It **opens by itself** when you were sent there from an admin page (`returnUrl` starts with `/admin`).
+- The old `/signin` page was removed; `{ path: 'signin', redirectTo: 'login' }` keeps old links working, and query params like `returnUrl` are kept by the redirect.
+- `customerGuard`, `adminGuard` and the 401 interceptor all send people to `/login?returnUrl=…`. After signing in: customers return to where they were going (never to `/admin`), admins go to `/admin`.
+
+### A design system (`src/styles.scss`)
+Before, every component had its own colours and button styles, which is why pages looked slightly different from each other. Now:
+- **Design tokens** are CSS custom properties on `:root`: `--c-primary`, `--c-text-2`, `--r-lg` (radius), `--shadow-md`, … Components use `var(--c-primary)` instead of `#2563eb`. Change a token once and the whole app follows.
+- **Shared classes:** `.container`, `.page`, `.page-header`, `.card`, `.btn` (+ `.btn-secondary`, `.btn-ghost`, `.btn-danger`, `.btn-sm`, `.btn-lg`, `.btn-block`), `.badge`, `.alert`, `.table`, `.field-error`, `.hint`, `.skeleton`.
+- **Status badges in one place:** `<span class="badge" [attr.data-status]="b.status">` or `[attr.data-payment]` / `[attr.data-vehicle]`. The colour rule lives once in `styles.scss`, and every page shows PENDING, VERIFIED etc. the same way.
+- **Form fields styled globally** with `:where(input, select, textarea)`. `:where()` has *zero specificity*, so any component can still override it without fighting `!important`.
+- **Font:** Inter from Google Fonts (`index.html`). Line height, letter-spacing on headings, `-webkit-font-smoothing` for crisp text.
+- `prefers-reduced-motion` turns animations off for people who asked their system for less motion.
+
+### Shell: header & footer (`app.component.*`)
+- A **sticky header** with a slightly see-through blurred background (`backdrop-filter: blur()`), a logo mark, navigation pills (active = blue tint), and the signed-in person's **avatar** (first letter of the name) + Sign out.
+- **Phones (< 760 px):** a ☰ menu button toggles the nav as a dropdown panel (a `menuOpen` signal; `aria-expanded` tells screen readers whether it's open).
+- `:host { display: flex; flex-direction: column; min-height: 100vh }` + `main { flex: 1 }` keeps the footer at the bottom even on short pages.
+
+### Icons (`shared/icon.component.ts`)
+- Inline SVG icons (shapes from the open-source **Lucide** set), one `@switch` case per icon: `<app-icon name="calendar" [size]="18" />`.
+- `stroke="currentColor"`: the icon takes the text colour of wherever it sits, so no separate icon colours.
+- **Why not `[innerHTML]` with SVG strings?** Angular's sanitizer strips unknown SVG markup from `innerHTML`. Writing the shapes in the template avoids that, and needs no `bypassSecurityTrust…`.
+
+### Page by page
+- **Vans:** a **hero** (gradient + your L300 photo + "Book a van" / "See our vans" + three selling points), then van cards with a status badge on the photo, spec chips (seats, passenger/cargo), a big price and a full-width button. "See our vans" uses `scrollIntoView()`: a plain `href="#fleet"` would make the browser load `/#fleet` and leave the Angular page. Loading shows **skeleton** cards (grey shimmering shapes) instead of a "Loading…" text.
+- **Booking form:** **two columns** on wide screens: numbered **step cards** (1 Van · 2 Dates · 3 Your details · 4 Trip & pickup · 5 Down payment) on the left, and a **sticky summary card** on the right (`position: sticky; top: …`) with the van, dates, total, down payment, balance and the submit button, always in view while you scroll. On phones the summary comes after the steps.
+- **Confirmation:** a big status banner with an icon (blue = request received, green = confirmed, amber = please check your payment, grey = cancelled/completed), a reference card, and a payment card.
+- **My bookings:** clickable booking cards with status badges; an empty state with a "Browse vans" button.
+- **Upload box:** a large dashed drop area with an icon and "JPG, PNG or WebP · max 5 MB".
+- **Admin:** a page header and pill tabs; the Bookings tab has **three numbers** at the top (bookings · waiting for confirmation · **payments to check**, highlighted amber when > 0), filters in a card, a cleaner table (customer email shown, uppercase headers) and a restyled proof dialog.
+
+### How it was checked
+- A screenshot script went through **every page on desktop (1280 px) and phone (390 px)** and the screenshots were reviewed. That review caught two things, both fixed: dropdowns were 2 px taller than date fields (labels didn't line up), and the phone footer was squeezed.
+- 16 functional checks:
+  - Inter loaded; Google drew its button with your Client ID;
+  - the admin form is folded for customers and open when coming from `/admin`; `/book` and the old `/signin` lead to `/login` with `returnUrl` kept;
+  - admin login works from the shared page; the booking summary card shows ₱10,500 / balance ₱10,000; the booking reaches the "request received" banner; admin "Payments to check" = 1;
+  - the phone menu opens; no sideways scroll on any page.
+- The test booking and test customer were deleted afterwards.
+
+---
+
 ## Before going online (deployment checklist)
 Everything so far runs on your computer. Before deploying (Render, Railway, a VPS):
 1. **Secrets out of the code:** the database password, `ADMIN_PASSWORD` and `JWT_SECRET` become environment variables on the server. Never use the `admin123` / dev secret defaults online.

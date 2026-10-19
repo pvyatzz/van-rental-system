@@ -11,7 +11,7 @@ export const routes: Routes = [
       import('./vehicles/vehicle-list/vehicle-list.component').then(m => m.VehicleListComponent)
   },
   {
-    // optional ?vehicleId=2 preselects a van. Booking needs a Google sign-in (customerGuard → /signin)
+    // optional ?vehicleId=2 preselects a van. Booking needs a Google sign-in (customerGuard → /login)
     path: 'book',
     canActivate: [customerGuard],
     loadComponent: () =>
@@ -24,8 +24,9 @@ export const routes: Routes = [
       import('./bookings/my-bookings/my-bookings.component').then(m => m.MyBookingsComponent)
   },
   {
+    // old customer sign-in address; customers and admin now share /login (query params are kept)
     path: 'signin',
-    loadComponent: () => import('./signin/signin.component').then(m => m.SigninComponent)
+    redirectTo: 'login'
   },
   {
     // the public reference code (VR-XXXXXXXX), not the database id

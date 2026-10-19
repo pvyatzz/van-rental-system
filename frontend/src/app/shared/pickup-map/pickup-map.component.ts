@@ -19,11 +19,11 @@ const DEFAULT_ZOOM = 11;
   template: `
     <div #mapElement class="map" aria-label="Map: click to set the pickup point"></div>
     <div class="actions">
-      <button type="button" (click)="useMyLocation()" [disabled]="locating()">
+      <button type="button" class="btn btn-secondary btn-sm" (click)="useMyLocation()" [disabled]="locating()">
         {{ locating() ? 'Finding you…' : 'Use my location' }}
       </button>
       @if (hasPin()) {
-        <button type="button" (click)="clearPin()">Remove pin</button>
+        <button type="button" class="btn btn-ghost btn-sm" (click)="clearPin()">Remove pin</button>
       }
       @if (message()) {
         <span class="message">{{ message() }}</span>
@@ -31,11 +31,10 @@ const DEFAULT_ZOOM = 11;
     </div>
   `,
   styles: `
-    .map { height: 280px; border-radius: 8px; border: 1px solid #c9ccd1; z-index: 0; }
-    .actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 8px; }
-    button { padding: 6px 12px; border: 1px solid #c9ccd1; border-radius: 6px; background: #fff; font: inherit; font-size: 0.85rem; cursor: pointer; }
-    button:disabled { opacity: 0.6; cursor: wait; }
-    .message { color: #555; font-size: 0.85rem; }
+    .map { height: 300px; border-radius: var(--r-lg); border: 1px solid var(--c-border); z-index: 0;
+      overflow: hidden; }
+    .actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 10px; }
+    .message { color: var(--c-text-2); font-size: 0.85rem; }
   `
 })
 export class PickupMapComponent implements AfterViewInit, OnDestroy {

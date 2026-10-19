@@ -1,32 +1,506 @@
-/* Global styles */
-body {
-  margin: 0;
-  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-  background: #f7f8fa;
-  color: #1d1d1f;
+/* ==========================================================================
+   Design system — every page uses these tokens and shared classes.
+   Change a colour or radius here and the whole app follows.
+   ========================================================================== */
+
+:root {
+  /* Surfaces & text */
+  --c-bg: #f5f7fb;
+  --c-surface: #ffffff;
+  --c-surface-2: #f1f4f9;
+  --c-border: #e3e8ef;
+  --c-border-strong: #cbd3df;
+  --c-text: #0f172a;
+  --c-text-2: #475569;
+  --c-text-3: #64748b;
+
+  /* Brand */
+  --c-primary: #2563eb;
+  --c-primary-hover: #1d4ed8;
+  --c-primary-soft: #eef4ff;
+  --c-primary-ink: #1e3a8a;
+  --c-navy: #0b1b3a;
+  --c-accent: #f59e0b;
+
+  /* Status (always paired with text, never colour alone) */
+  --c-success: #15803d;
+  --c-success-soft: #dcfce7;
+  --c-warning: #b45309;
+  --c-warning-soft: #fef3c7;
+  --c-danger: #b91c1c;
+  --c-danger-soft: #fee2e2;
+  --c-info: #1d4ed8;
+  --c-info-soft: #dbeafe;
+  --c-neutral-soft: #eef1f5;
+
+  /* Shape & depth */
+  --r-sm: 8px;
+  --r-md: 12px;
+  --r-lg: 16px;
+  --r-xl: 24px;
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.06);
+  --shadow-md: 0 4px 16px rgba(15, 23, 42, 0.08);
+  --shadow-lg: 0 18px 48px rgba(15, 23, 42, 0.16);
+  --focus-ring: 0 0 0 3px rgba(37, 99, 235, 0.3);
+
+  --header-h: 64px;
+  --container: 1160px;
 }
 
-/* Shared button style, used by several components */
-.btn {
+/* ---------- Base ---------- */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-size: 15px;
+  line-height: 1.55;
+  background: var(--c-bg);
+  color: var(--c-text);
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3 {
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  color: var(--c-text);
+}
+
+a {
+  color: var(--c-primary);
+}
+
+img {
+  max-width: 100%;
+}
+
+:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+/* ---------- Layout ---------- */
+
+.container {
+  width: 100%;
+  max-width: var(--container);
+  margin: 0 auto;
+  padding: 0 16px;
+
+  @media (min-width: 720px) {
+    padding: 0 24px;
+  }
+}
+
+.page {
+  padding-top: 32px;
+  padding-bottom: 56px;
+}
+
+.page-header {
+  margin-bottom: 24px;
+
+  h1 {
+    margin: 0 0 4px;
+    font-size: clamp(1.6rem, 2.5vw, 2rem);
+    font-weight: 800;
+  }
+
+  p {
+    margin: 0;
+    color: var(--c-text-2);
+  }
+}
+
+.eyebrow {
   display: inline-block;
-  padding: 10px 18px;
-  border: 0;
-  border-radius: 6px;
-  background: #1f3b57;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--c-primary);
+  margin-bottom: 6px;
+}
+
+/* ---------- Cards ---------- */
+
+.card {
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.card-pad {
+  padding: 20px;
+
+  @media (min-width: 720px) {
+    padding: 24px;
+  }
+}
+
+.card-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 16px;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+/* Numbered step bubble (booking form sections) */
+.step {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--c-primary-soft);
+  color: var(--c-primary);
+  font-size: 0.85rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+/* ---------- Buttons ---------- */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 42px;
+  padding: 0 18px;
+  border: 1px solid transparent;
+  border-radius: var(--r-md);
+  background: var(--c-primary);
   color: #fff;
   font: inherit;
   font-weight: 600;
-  text-align: center;
   text-decoration: none;
+  white-space: nowrap;
   cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, box-shadow 0.15s, transform 0.05s;
 
   &:hover {
-    background: #2b5179;
+    background: var(--c-primary-hover);
+  }
+
+  &:active {
+    transform: translateY(1px);
   }
 
   &:disabled,
   &.disabled {
-    background: #a9b4bf;
+    background: #a8b4c6;
+    border-color: transparent;
+    color: #fff;
     cursor: not-allowed;
+    transform: none;
+  }
+}
+
+.btn-secondary {
+  background: var(--c-surface);
+  color: var(--c-text);
+  border-color: var(--c-border-strong);
+
+  &:hover {
+    background: var(--c-surface-2);
+  }
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--c-text-2);
+
+  &:hover {
+    background: var(--c-surface-2);
+    color: var(--c-text);
+  }
+}
+
+.btn-danger {
+  background: var(--c-surface);
+  color: var(--c-danger);
+  border-color: #f3b4b4;
+
+  &:hover {
+    background: var(--c-danger-soft);
+  }
+}
+
+.btn-light {
+  background: #fff;
+  color: var(--c-navy);
+
+  &:hover {
+    background: #e8eefb;
+  }
+}
+
+.btn-sm {
+  min-height: 34px;
+  padding: 0 12px;
+  font-size: 0.85rem;
+  border-radius: var(--r-sm);
+}
+
+.btn-lg {
+  min-height: 50px;
+  padding: 0 24px;
+  font-size: 1rem;
+}
+
+.btn-block {
+  width: 100%;
+}
+
+/* A button that looks like a link */
+.link-btn {
+  background: none;
+  border: 0;
+  padding: 0;
+  color: var(--c-primary);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+/* ---------- Forms ---------- */
+
+label,
+.label {
+  display: block;
+  margin: 0 0 6px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--c-text);
+}
+
+/* :where() keeps specificity at zero, so components can still override */
+:where(input:not([type='checkbox']):not([type='radio']):not([type='file']), select, textarea) {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid var(--c-border-strong);
+  border-radius: var(--r-md);
+  background: var(--c-surface);
+  color: var(--c-text);
+  font: inherit;
+  transition: border-color 0.15s, box-shadow 0.15s;
+
+  &::placeholder {
+    color: #94a3b8;
+  }
+
+  &:hover {
+    border-color: #a9b5c7;
+  }
+
+  &:focus {
+    outline: none;
+    border-color: var(--c-primary);
+    box-shadow: var(--focus-ring);
+  }
+
+  &.ng-invalid.ng-touched {
+    border-color: var(--c-danger);
+  }
+}
+
+textarea {
+  resize: vertical;
+}
+
+/* Same height for every one-line field (dropdowns render slightly taller than inputs otherwise) */
+:where(select, input:not([type='checkbox']):not([type='radio']):not([type='file'])) {
+  height: 44px;
+}
+
+.field {
+  margin-bottom: 16px;
+}
+
+.field-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+
+  @media (max-width: 520px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.field-error {
+  margin: 6px 0 0;
+  color: var(--c-danger);
+  font-size: 0.85rem;
+}
+
+.hint {
+  margin: 6px 0 0;
+  color: var(--c-text-3);
+  font-size: 0.85rem;
+}
+
+.muted {
+  color: var(--c-text-3);
+  font-weight: 400;
+}
+
+/* ---------- Badges ---------- */
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  background: var(--c-neutral-soft);
+  color: var(--c-text-2);
+  white-space: nowrap;
+
+  &::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+
+  /* Booking status */
+  &[data-status='PENDING'] { background: var(--c-warning-soft); color: var(--c-warning); }
+  &[data-status='CONFIRMED'] { background: var(--c-success-soft); color: var(--c-success); }
+  &[data-status='COMPLETED'] { background: var(--c-info-soft); color: var(--c-info); }
+  &[data-status='CANCELLED'] { background: var(--c-neutral-soft); color: var(--c-text-3); }
+
+  /* Down payment */
+  &[data-payment='SUBMITTED'] { background: var(--c-warning-soft); color: var(--c-warning); }
+  &[data-payment='VERIFIED'] { background: var(--c-success-soft); color: var(--c-success); }
+  &[data-payment='REJECTED'] { background: var(--c-danger-soft); color: var(--c-danger); }
+
+  /* Vehicle status */
+  &[data-vehicle='AVAILABLE'] { background: var(--c-success-soft); color: var(--c-success); }
+  &[data-vehicle='BOOKED'] { background: var(--c-warning-soft); color: var(--c-warning); }
+  &[data-vehicle='UNDER_MAINTENANCE'] { background: var(--c-neutral-soft); color: var(--c-text-3); }
+}
+
+/* ---------- Alerts ---------- */
+
+.alert {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 12px 14px;
+  border-radius: var(--r-md);
+  font-size: 0.92rem;
+  background: var(--c-danger-soft);
+  color: #7f1d1d;
+  margin: 0 0 16px;
+
+  &.alert-success { background: var(--c-success-soft); color: #14532d; }
+  &.alert-warning { background: var(--c-warning-soft); color: #78350f; }
+  &.alert-info { background: var(--c-info-soft); color: var(--c-primary-ink); }
+}
+
+/* ---------- Tables ---------- */
+
+.table-wrap {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+
+  th,
+  td {
+    text-align: left;
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--c-border);
+    vertical-align: top;
+  }
+
+  th {
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--c-text-3);
+    background: var(--c-surface-2);
+    white-space: nowrap;
+  }
+
+  tbody tr:hover {
+    background: #fafbfd;
+  }
+
+  tbody tr:last-child td {
+    border-bottom: 0;
+  }
+
+  .num {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+}
+
+/* ---------- Misc ---------- */
+
+.empty-state {
+  padding: 40px 20px;
+  text-align: center;
+  color: var(--c-text-2);
+
+  h2 {
+    margin: 0 0 6px;
+    font-size: 1.1rem;
+  }
+
+  p {
+    margin: 0 0 16px;
+  }
+}
+
+.skeleton {
+  border-radius: var(--r-md);
+  background: linear-gradient(90deg, #eef1f6 25%, #f6f8fb 50%, #eef1f6 75%);
+  background-size: 200% 100%;
+  animation: skeleton 1.2s infinite;
+}
+
+@keyframes skeleton {
+  to {
+    background-position: -200% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
   }
 }

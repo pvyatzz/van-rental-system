@@ -16,9 +16,9 @@ $ink-3: #777;
   button {
     width: 34px;
     height: 34px;
-    border: 1px solid #c9ccd1;
+    border: 1px solid var(--c-border-strong);
     border-radius: 6px;
-    background: #fff;
+    background: var(--c-surface);
     font-size: 1.2rem;
     line-height: 1;
     cursor: pointer;
@@ -73,9 +73,10 @@ $ink-3: #777;
   display: flex;
   flex-direction: column;
   gap: 4px;
-  background: #fff;
-  border: 1px solid #e3e3e3;
-  border-radius: 10px;
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-sm);
   padding: 14px 16px;
 
   .label {
@@ -84,8 +85,9 @@ $ink-3: #777;
   }
 
   .value {
-    font-size: 1.6rem;
-    font-weight: 600;
+    font-size: 1.7rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
     color: $ink;
 
     &.small {
@@ -102,9 +104,10 @@ $ink-3: #777;
 
 // ---- Cards ----
 .card {
-  background: #fff;
-  border: 1px solid #e3e3e3;
-  border-radius: 10px;
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-sm);
   padding: 16px;
   margin-bottom: 16px;
 
@@ -216,7 +219,7 @@ $axis-width: 52px;
   gap: 2px;
   min-width: 150px;
   padding: 8px 10px;
-  background: #fff;
+  background: var(--c-surface);
   border: 1px solid #d9dce1;
   border-radius: 8px;
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
@@ -246,34 +249,4 @@ $axis-width: 52px;
     color: $ink-3;
     font-size: 0.72rem;
   }
-}
-
-// ---- Tables ----
-.table-wrap {
-  overflow-x: auto;
-}
-
-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.92rem;
-}
-
-th,
-td {
-  text-align: left;
-  padding: 8px 10px;
-  border-bottom: 1px solid #eef0f2;
-}
-
-th {
-  color: #444;
-  font-weight: 600;
-  background: #f7f8fa;
-}
-
-.num {
-  text-align: right;
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
 }

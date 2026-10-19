@@ -1,18 +1,20 @@
 import { CurrencyPipe } from '@angular/common';
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, ElementRef, OnInit, inject, signal, viewChild } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
 import { Vehicle, VehicleStatus } from '../../models/vehicle';
 import { VehicleService } from '../../services/vehicle.service';
+import { IconComponent } from '../../shared/icon.component';
 
 @Component({
   selector: 'app-vehicle-list',
-  imports: [CurrencyPipe, RouterLink],
+  imports: [CurrencyPipe, RouterLink, IconComponent],
   templateUrl: './vehicle-list.component.html',
   styleUrl: './vehicle-list.component.scss'
 })
 export class VehicleListComponent implements OnInit {
   private readonly vehicleService = inject(VehicleService);
+  private readonly fleet = viewChild.required<ElementRef<HTMLElement>>('fleet');
 
   readonly vehicles = signal<Vehicle[]>([]);
   readonly loading = signal(true);
@@ -26,6 +28,11 @@ export class VehicleListComponent implements OnInit {
 
   ngOnInit(): void {
     this.load();
+  }
+
+  /** "See our vans": a plain href="#fleet" would leave the Angular page, so scroll instead */
+  scrollToFleet(): void {
+    this.fleet().nativeElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
   load(): void {

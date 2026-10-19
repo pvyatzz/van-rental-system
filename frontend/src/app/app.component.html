@@ -1,28 +1,60 @@
-<header class="topbar">
-  <a routerLink="/vehicles" class="brand">Van Rental</a>
-  <nav>
-    <a routerLink="/vehicles" routerLinkActive="active">Vans</a>
-    <a routerLink="/book" routerLinkActive="active">Book a van</a>
-    @if (auth.isAdmin()) {
-      <a routerLink="/admin" routerLinkActive="active">Admin</a>
-    }
-    @if (auth.isCustomer()) {
-      <a routerLink="/my-bookings" routerLinkActive="active">My bookings</a>
-    }
-    @if (auth.loggedIn()) {
-      <button type="button" class="logout" (click)="logout()">Sign out ({{ auth.displayName() }})</button>
-    } @else {
-      <a routerLink="/signin" routerLinkActive="active">Sign in</a>
-    }
-  </nav>
+<header class="site-header">
+  <div class="container header-inner">
+    <a routerLink="/vehicles" class="brand" (click)="menuOpen.set(false)">
+      <span class="brand-mark"><app-icon name="van" [size]="20" /></span>
+      <span class="brand-name">Van Rental</span>
+    </a>
+
+    <!-- Phones: the menu button opens the nav as a panel -->
+    <button type="button" class="menu-toggle" (click)="menuOpen.set(!menuOpen())"
+            [attr.aria-expanded]="menuOpen()" aria-controls="site-nav" aria-label="Menu">
+      <app-icon [name]="menuOpen() ? 'x' : 'menu'" [size]="22" />
+    </button>
+
+    <nav id="site-nav" class="nav" [class.open]="menuOpen()" (click)="menuOpen.set(false)">
+      <a routerLink="/vehicles" routerLinkActive="active">Vans</a>
+      <a routerLink="/book" routerLinkActive="active">Book a van</a>
+      @if (auth.isCustomer()) {
+        <a routerLink="/my-bookings" routerLinkActive="active">My bookings</a>
+      }
+      @if (auth.isAdmin()) {
+        <a routerLink="/admin" routerLinkActive="active">Admin</a>
+      }
+
+      <span class="nav-spacer"></span>
+
+      @if (auth.loggedIn()) {
+        <span class="user">
+          <span class="avatar" aria-hidden="true">{{ initial() }}</span>
+          <span class="user-name">{{ auth.displayName() }}</span>
+        </span>
+        <button type="button" class="btn btn-ghost btn-sm logout" (click)="logout()">
+          <app-icon name="log-out" [size]="16" /> Sign out
+        </button>
+      } @else {
+        <a class="btn btn-sm signin" routerLink="/login">Sign in</a>
+      }
+    </nav>
+  </div>
 </header>
 
 <main>
   <router-outlet />
 </main>
 
-<footer class="footer">
-  @if (!auth.loggedIn()) {
-    <a routerLink="/login">Admin login</a>
-  }
+<footer class="site-footer">
+  <div class="container footer-inner">
+    <div class="footer-brand">
+      <span class="brand-mark small"><app-icon name="van" [size]="16" /></span>
+      <span>Van Rental</span>
+    </div>
+    <p>Mitsubishi L300 FB and Hyundai H100 vans for family trips, company events and cargo.</p>
+    <nav class="footer-links">
+      <a routerLink="/vehicles">Vans</a>
+      <a routerLink="/book">Book a van</a>
+      @if (!auth.loggedIn()) {
+        <a routerLink="/login">Sign in</a>
+      }
+    </nav>
+  </div>
 </footer>

@@ -1,4 +1,20 @@
-<form class="filters" [formGroup]="filters">
+<!-- Quick numbers for the current filter -->
+<div class="stats">
+  <div class="card stat">
+    <span class="stat-label">Bookings</span>
+    <strong>{{ bookings().length }}</strong>
+  </div>
+  <div class="card stat">
+    <span class="stat-label">Waiting for confirmation</span>
+    <strong>{{ pendingCount() }}</strong>
+  </div>
+  <div class="card stat" [class.attention]="paymentsToCheck() > 0">
+    <span class="stat-label">Payments to check</span>
+    <strong>{{ paymentsToCheck() }}</strong>
+  </div>
+</div>
+
+<form class="card filters" [formGroup]="filters">
   <div>
     <label for="f-vehicle">Van</label>
     <select id="f-vehicle" formControlName="vehicleId">
@@ -25,15 +41,8 @@
     <label for="f-to">To</label>
     <input id="f-to" type="date" formControlName="to" />
   </div>
-  <button type="button" class="link" (click)="clearFilters()">Clear filters</button>
+  <button type="button" class="btn btn-ghost clear" (click)="clearFilters()">Clear filters</button>
 </form>
-
-<p class="summary">
-  {{ bookings().length }} {{ bookings().length === 1 ? 'booking' : 'bookings' }}
-  @if (pendingCount() > 0) {
-    · <strong>{{ pendingCount() }} waiting for confirmation</strong>
-  }
-</p>
 
 @if (actionError()) {
   <p class="alert" role="alert">{{ actionError() }}</p>
@@ -41,78 +50,85 @@
 
 @if (error()) {
   <p class="alert" role="alert">{{ error() }}</p>
-} @else if (loading()) {
-  <p class="muted">Loading bookings…</p>
+} @else if (loading() && bookings().length === 0) {
+  <div class="skeleton" style="height: 220px"></div>
 } @else if (bookings().length === 0) {
-  <p class="muted">No bookings match these filters.</p>
+  <div class="card empty-state"><h2>No bookings</h2><p>No bookings match these filters.</p></div>
 } @else {
   <!-- the wrapper scrolls sideways on small screens instead of squashing the table -->
-  <div class="table-wrap">
-    <table>
-      <thead>
-        <tr>
-          <th>#</th>
-          <th>Van</th>
-          <th>Customer</th>
-          <th>Dates</th>
-          <th class="num">Total</th>
-          <th>Down payment</th>
-          <th>Status</th>
-          <th>Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        @for (b of bookings(); track b.id) {
+  <div class="card table-card" [class.reloading]="loading()">
+    <div class="table-wrap">
+      <table class="table">
+        <thead>
           <tr>
-            <td>{{ b.id }}<span class="ref">{{ b.reference }}</span></td>
-            <td>{{ b.vehicleModel }} #{{ b.vehicleId }}</td>
-            <td>
-              {{ b.customerName }}
-              <a class="phone" [href]="'tel:' + b.customerContactNumber">{{ b.customerContactNumber }}</a>
-            </td>
-            <td class="nowrap">
-              {{ b.startDate | date: 'MMM d' }} – {{ b.endDate | date: 'MMM d, y' }}
-              <span class="muted">({{ days(b) }}d)</span>
-              @if (b.purpose) {
-                <span class="purpose">{{ b.purpose }}</span>
-              }
-              @if (b.pickupAddress || b.pickupLatitude !== null) {
-                <span class="pickup">
-                  Pickup: {{ b.pickupAddress ?? 'pin on map' }}
-                  @if (b.pickupLatitude !== null && b.pickupLongitude !== null) {
-                    · <a [href]="mapUrl(b.pickupLatitude, b.pickupLongitude)" target="_blank" rel="noopener">Open in Google Maps</a>
-                  }
-                </span>
-              }
-            </td>
-            <td class="num">{{ b.totalPrice | currency: 'PHP' : 'symbol' : '1.0-2' }}</td>
-            <td class="payment">
-              @if (b.paymentStatus) {
-                <span class="pay" [attr.data-payment]="b.paymentStatus">
-                  {{ b.downPayment | currency: 'PHP' : 'symbol' : '1.0-0' }} · {{ paymentLabels[b.paymentStatus] }}
-                </span>
-                <button type="button" class="link" (click)="openProof(b)">View proof</button>
-              } @else {
-                <span class="muted">—</span>
-              }
-            </td>
-            <td><span class="status" [attr.data-status]="b.status">{{ b.status }}</span></td>
-            <td class="actions">
-              @for (action of actions[b.status]; track action.status) {
-                <button type="button" [class]="'act ' + action.status.toLowerCase()"
-                        [disabled]="busyId() === b.id || (action.status === 'CONFIRMED' && needsPaymentCheck(b))"
-                        [title]="action.status === 'CONFIRMED' && needsPaymentCheck(b) ? 'Verify the down payment first' : ''"
-                        (click)="changeStatus(b, action)">
-                  {{ action.label }}
-                </button>
-              } @empty {
-                <span class="muted">—</span>
-              }
-            </td>
+            <th>Booking</th>
+            <th>Customer</th>
+            <th>Trip</th>
+            <th class="num">Total</th>
+            <th>Down payment</th>
+            <th>Status</th>
+            <th>Actions</th>
           </tr>
-        }
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          @for (b of bookings(); track b.id) {
+            <tr>
+              <td>
+                <span class="ref">{{ b.reference }}</span>
+                <span class="sub">{{ b.vehicleModel }} #{{ b.vehicleId }}</span>
+              </td>
+              <td>
+                <strong class="name">{{ b.customerName }}</strong>
+                <a class="sub" [href]="'tel:' + b.customerContactNumber">{{ b.customerContactNumber }}</a>
+                @if (b.customerEmail) {
+                  <a class="sub" [href]="'mailto:' + b.customerEmail">{{ b.customerEmail }}</a>
+                }
+              </td>
+              <td class="trip">
+                <span class="nowrap">{{ b.startDate | date: 'MMM d' }} – {{ b.endDate | date: 'MMM d, y' }}
+                  <span class="muted">· {{ days(b) }}d</span></span>
+                @if (b.purpose) {
+                  <span class="sub">{{ b.purpose }}</span>
+                }
+                @if (b.pickupAddress || b.pickupLatitude !== null) {
+                  <span class="sub pickup">
+                    <app-icon name="map-pin" [size]="13" /> {{ b.pickupAddress ?? 'Pin on map' }}
+                    @if (b.pickupLatitude !== null && b.pickupLongitude !== null) {
+                      · <a [href]="mapUrl(b.pickupLatitude, b.pickupLongitude)" target="_blank" rel="noopener">Open in Google Maps</a>
+                    }
+                  </span>
+                }
+              </td>
+              <td class="num">{{ b.totalPrice | currency: 'PHP' : 'symbol' : '1.0-0' }}</td>
+              <td class="payment">
+                @if (b.paymentStatus) {
+                  <span class="badge" [attr.data-payment]="b.paymentStatus">
+                    {{ b.downPayment | currency: 'PHP' : 'symbol' : '1.0-0' }} · {{ paymentLabels[b.paymentStatus] }}
+                  </span>
+                  <button type="button" class="link link-btn" (click)="openProof(b)">View proof</button>
+                } @else {
+                  <span class="muted">—</span>
+                }
+              </td>
+              <td><span class="badge" [attr.data-status]="b.status">{{ b.status }}</span></td>
+              <td class="actions">
+                @for (action of actions[b.status]; track action.status) {
+                  <button type="button"
+                          [class]="'btn btn-sm act ' + action.status.toLowerCase() + (action.status === 'CANCELLED' ? ' btn-danger' : '')"
+                          [disabled]="busyId() === b.id || (action.status === 'CONFIRMED' && needsPaymentCheck(b))"
+                          [title]="action.status === 'CONFIRMED' && needsPaymentCheck(b) ? 'Verify the down payment first' : ''"
+                          (click)="changeStatus(b, action)">
+                    {{ action.label }}
+                  </button>
+                } @empty {
+                  <span class="muted">—</span>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
   </div>
 }
 
@@ -121,13 +137,19 @@
   <div class="backdrop" (click)="closeProof()"></div>
   <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="proof-title">
     <div class="dialog-head">
-      <h2 id="proof-title">Down payment · {{ b.reference }}</h2>
-      <button type="button" class="close" (click)="closeProof()" aria-label="Close">✕</button>
+      <div>
+        <h2 id="proof-title">Down payment</h2>
+        <span class="ref">{{ b.reference }}</span>
+      </div>
+      <button type="button" class="close" (click)="closeProof()" aria-label="Close"><app-icon name="x" [size]="20" /></button>
     </div>
-    <p class="dialog-info">
-      {{ b.customerName }} · expected <strong>{{ b.downPayment | currency: 'PHP' : 'symbol' : '1.0-0' }}</strong>
-      · <span class="pay" [attr.data-payment]="b.paymentStatus">{{ b.paymentStatus ? paymentLabels[b.paymentStatus] : '' }}</span>
-    </p>
+    <div class="dialog-info">
+      <span>{{ b.customerName }}</span>
+      <span>Expected <strong>{{ b.downPayment | currency: 'PHP' : 'symbol' : '1.0-0' }}</strong></span>
+      @if (b.paymentStatus) {
+        <span class="badge" [attr.data-payment]="b.paymentStatus">{{ paymentLabels[b.paymentStatus] }}</span>
+      }
+    </div>
     <div class="proof-image">
       @if (proofUrl(); as url) {
         <a [href]="url" target="_blank" rel="noopener" title="Open full size">
@@ -139,12 +161,12 @@
         <p class="muted">Loading image…</p>
       }
     </div>
-    <p class="muted check">Check your GCash / bank history for this amount before verifying.</p>
+    <p class="check"><app-icon name="shield" [size]="16" /> Check your GCash / bank history for this amount before verifying.</p>
     @if (b.status === 'PENDING') {
       <div class="dialog-actions">
-        <button type="button" class="act confirmed" [disabled]="reviewing() || b.paymentStatus === 'VERIFIED'"
-                (click)="review(b, 'VERIFIED')">Payment received: verify</button>
-        <button type="button" class="act cancelled" [disabled]="reviewing() || b.paymentStatus === 'REJECTED'"
+        <button type="button" class="btn confirmed" [disabled]="reviewing() || b.paymentStatus === 'VERIFIED'"
+                (click)="review(b, 'VERIFIED')"><app-icon name="check" [size]="16" /> Payment received: verify</button>
+        <button type="button" class="btn btn-danger cancelled" [disabled]="reviewing() || b.paymentStatus === 'REJECTED'"
                 (click)="review(b, 'REJECTED')">Not received: reject</button>
       </div>
     }

@@ -1,276 +1,206 @@
+/* ---------- Quick numbers ---------- */
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 16px 18px;
+
+  strong {
+    font-size: 1.7rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+  }
+
+  &.attention {
+    border-color: #fcd34d;
+    background: #fffbeb;
+
+    strong {
+      color: var(--c-warning);
+    }
+  }
+}
+
+.stat-label {
+  color: var(--c-text-3);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+/* ---------- Filters ---------- */
+
 .filters {
   display: flex;
   flex-wrap: wrap;
   align-items: flex-end;
   gap: 12px;
-  background: #fff;
-  border: 1px solid #e3e3e3;
-  border-radius: 10px;
-  padding: 14px 16px;
+  margin-bottom: 16px;
+  padding: 16px;
 
   > div {
-    flex: 1 1 160px;
+    flex: 1 1 170px;
   }
 
   label {
-    display: block;
-    font-size: 0.85rem;
-    margin-bottom: 4px;
-    color: #555;
-  }
-
-  select,
-  input {
-    width: 100%;
-    box-sizing: border-box;
-    padding: 8px 10px;
-    border: 1px solid #c9ccd1;
-    border-radius: 6px;
-    font: inherit;
-    background: #fff;
+    font-size: 0.8rem;
+    color: var(--c-text-2);
   }
 }
 
-.link {
-  background: none;
-  border: 0;
-  color: #1f3b57;
-  text-decoration: underline;
-  cursor: pointer;
-  font: inherit;
-  padding: 8px 4px;
+.clear {
+  min-height: 44px;
 }
 
-.summary {
-  margin: 16px 0 10px;
+/* ---------- Table ---------- */
+
+.table-card {
+  overflow: hidden;
+  transition: opacity 0.15s;
+
+  &.reloading {
+    opacity: 0.55; // refetch keeps the frame
+  }
 }
 
-.muted {
-  color: #777;
-}
-
-.alert {
-  background: #fde8e7;
-  color: #b3261e;
-  padding: 10px 12px;
-  border-radius: 6px;
-}
-
-.table-wrap {
-  overflow-x: auto;
-  background: #fff;
-  border: 1px solid #e3e3e3;
-  border-radius: 10px;
-}
-
-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.92rem;
-}
-
-th,
-td {
-  text-align: left;
-  padding: 10px 12px;
-  border-bottom: 1px solid #eef0f2;
-  vertical-align: top;
-}
-
-th {
-  background: #f7f8fa;
+.ref {
+  display: block;
+  font-family: ui-monospace, 'SF Mono', Consolas, monospace;
   font-weight: 600;
-  color: #444;
+  font-size: 0.85rem;
   white-space: nowrap;
 }
 
-tbody tr:last-child td {
-  border-bottom: 0;
+.name {
+  display: block;
+  white-space: nowrap;
 }
 
-.num {
-  text-align: right;
-  white-space: nowrap;
+.sub {
+  display: block;
+  margin-top: 2px;
+  color: var(--c-text-3);
+  font-size: 0.82rem;
+  text-decoration: none;
+  max-width: 260px;
+}
+
+a.sub:hover {
+  color: var(--c-primary);
+}
+
+.trip {
+  min-width: 200px;
 }
 
 .nowrap {
   white-space: nowrap;
 }
 
-.ref {
-  display: block;
-  color: #777;
-  font-size: 0.75rem;
-  font-family: ui-monospace, Consolas, monospace;
-  white-space: nowrap;
-}
-
-.phone {
-  display: block;
-  color: #555;
-  font-size: 0.85rem;
-}
-
-.purpose {
-  display: block;
-  color: #666;
-  font-size: 0.85rem;
-  white-space: normal;
-  max-width: 260px;
-}
-
 .pickup {
-  display: block;
-  color: #555;
-  font-size: 0.85rem;
-  white-space: normal;
-  max-width: 280px;
-  margin-top: 2px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
 }
 
-.status {
-  display: inline-block;
-  padding: 2px 10px;
-  border-radius: 999px;
-  font-size: 0.78rem;
-  font-weight: 600;
+.payment {
+  white-space: nowrap;
 
-  &[data-status='PENDING'] {
-    background: #fdecd6;
-    color: #8a4b00;
-  }
-
-  &[data-status='CONFIRMED'] {
-    background: #e3f4e6;
-    color: #1e6b2e;
-  }
-
-  &[data-status='COMPLETED'] {
-    background: #e4ecf5;
-    color: #1f3b57;
-  }
-
-  &[data-status='CANCELLED'] {
-    background: #f1f1f1;
-    color: #777;
+  .link-btn {
+    display: block;
+    margin-top: 6px;
+    font-size: 0.82rem;
   }
 }
 
 .actions {
   white-space: nowrap;
-}
 
-.act {
-  padding: 5px 10px;
-  margin-right: 6px;
-  border-radius: 5px;
-  border: 1px solid #c9ccd1;
-  background: #fff;
-  font: inherit;
-  font-size: 0.85rem;
-  cursor: pointer;
-
-  &.confirmed,
-  &.completed {
-    background: #1f3b57;
-    border-color: #1f3b57;
-    color: #fff;
-  }
-
-  &.cancelled {
-    color: #b3261e;
-    border-color: #e4b4b0;
-  }
-
-  &:disabled {
-    opacity: 0.5;
-    cursor: wait;
+  .btn + .btn {
+    margin-left: 6px;
   }
 }
 
-// ---- Down payment column + proof dialog ----
-.payment {
-  white-space: nowrap;
-
-  .link {
-    display: block;
-    padding: 2px 0 0;
-    font-size: 0.85rem;
-  }
-}
-
-.pay {
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: #8a4b00;
-
-  &[data-payment='VERIFIED'] {
-    color: #1e6b2e;
-  }
-
-  &[data-payment='REJECTED'] {
-    color: #b3261e;
-  }
-}
-
-.act:disabled[title]:not([title='']) {
-  cursor: not-allowed;
-}
+/* ---------- Proof dialog ---------- */
 
 .backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.45);
-  z-index: 10;
+  z-index: 100;
+  background: rgba(15, 23, 42, 0.55);
+  backdrop-filter: blur(2px);
 }
 
 .dialog {
   position: fixed;
-  z-index: 11;
+  z-index: 101;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: min(520px, calc(100vw - 32px));
+  width: min(540px, calc(100vw - 32px));
   max-height: calc(100vh - 32px);
   overflow-y: auto;
-  background: #fff;
-  border-radius: 12px;
-  padding: 16px 18px;
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+  padding: 22px;
+  border-radius: var(--r-xl);
+  background: var(--c-surface);
+  box-shadow: var(--shadow-lg);
 }
 
 .dialog-head {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   gap: 12px;
 
   h2 {
-    font-size: 1.05rem;
     margin: 0;
+    font-size: 1.2rem;
+  }
+
+  .ref {
+    color: var(--c-text-3);
   }
 }
 
 .close {
-  background: none;
+  display: inline-grid;
+  place-items: center;
+  padding: 6px;
   border: 0;
-  font-size: 1.1rem;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--c-text-2);
   cursor: pointer;
-  padding: 4px 8px;
+
+  &:hover {
+    background: var(--c-surface-2);
+  }
 }
 
 .dialog-info {
-  margin: 6px 0 12px;
-  color: #444;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  margin: 14px 0;
+  color: var(--c-text-2);
 }
 
 .proof-image {
   display: flex;
   justify-content: center;
-  background: #f4f5f7;
-  border-radius: 8px;
-  min-height: 160px;
   align-items: center;
+  min-height: 180px;
+  border-radius: var(--r-lg);
+  background: var(--c-surface-2);
 
   img {
     display: block;
@@ -281,8 +211,12 @@ tbody tr:last-child td {
 }
 
 .check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 14px 0;
+  color: var(--c-text-3);
   font-size: 0.85rem;
-  margin: 10px 0;
 }
 
 .dialog-actions {

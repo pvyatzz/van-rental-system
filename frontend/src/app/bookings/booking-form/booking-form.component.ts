@@ -1,4 +1,4 @@
-import { CurrencyPipe } from '@angular/common';
+import { CurrencyPipe, DatePipe } from '@angular/common';
 import { Component, OnInit, computed, inject, input, signal } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { AbstractControl, FormBuilder, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
@@ -12,6 +12,7 @@ import { BookingService } from '../../services/booking.service';
 import { VehicleService } from '../../services/vehicle.service';
 import { rentalDays, todayIso } from '../../shared/dates';
 import { PickupMapComponent, PickupPoint } from '../../shared/pickup-map/pickup-map.component';
+import { IconComponent } from '../../shared/icon.component';
 import { problemMessage } from '../../shared/problem';
 import { ProofUploadComponent } from '../../shared/proof-upload/proof-upload.component';
 
@@ -34,7 +35,7 @@ function dateRangeValidator(group: AbstractControl): ValidationErrors | null {
 
 @Component({
   selector: 'app-booking-form',
-  imports: [ReactiveFormsModule, CurrencyPipe, PickupMapComponent, ProofUploadComponent],
+  imports: [ReactiveFormsModule, CurrencyPipe, DatePipe, PickupMapComponent, ProofUploadComponent, IconComponent],
   templateUrl: './booking-form.component.html',
   styleUrl: './booking-form.component.scss'
 })
@@ -90,6 +91,9 @@ export class BookingFormComponent implements OnInit {
   readonly selectedVehicle = computed(() =>
     this.vehicles().find(v => v.id === this.formValue().vehicleId) ?? null
   );
+
+  /** The chosen dates, for the summary card */
+  readonly formDates = computed(() => this.formValue().dates);
 
   readonly days = computed(() => {
     const { startDate, endDate } = this.formValue().dates;

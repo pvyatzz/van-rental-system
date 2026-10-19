@@ -90,11 +90,17 @@ npx -p @angular/cli@19 ng new . --routing --style=scss --skip-tests
 
 ## Phase 7 — Customer accounts & down payment
 - [x] Customers sign in with Google before booking (name + email from Google; "My bookings" page)
-- [ ] Paste the Google OAuth Client ID into `environment.ts` and `GOOGLE_CLIENT_ID` (steps in LEARNING_NOTES 7.1)
+- [x] Paste the Google OAuth Client ID into `environment.ts` and `GOOGLE_CLIENT_ID` (steps in LEARNING_NOTES 7.1)
 - [x] ₱500 down payment: GCash/InstaPay QR in the booking form (`bank-acc` section), proof screenshot upload
 - [x] Admin views the proof, verifies or rejects it; Confirm requires a verified payment; customer can re-upload
 - [x] Emails: booking request received, payment not confirmed, booking confirmed
 - [ ] Configure a real mail server (Gmail App Password — LEARNING_NOTES 6.2) so emails are actually sent
+
+## Phase 8 — Modern UI
+- [x] Design system (tokens, Inter font, shared buttons/cards/badges/forms) in `styles.scss`
+- [x] Sticky header with avatar + phone menu; footer
+- [x] One shared login page for customers (Google) and admin (username/password)
+- [x] Redesigned pages: vans (hero), booking form (steps + sticky summary), confirmation, my bookings, admin
 
 ---
 

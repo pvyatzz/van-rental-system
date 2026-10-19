@@ -9,10 +9,11 @@ import { rentalDays } from '../../shared/dates';
 import { googleMapsUrl } from '../../shared/maps';
 import { problemMessage } from '../../shared/problem';
 import { ProofUploadComponent } from '../../shared/proof-upload/proof-upload.component';
+import { IconComponent } from '../../shared/icon.component';
 
 @Component({
   selector: 'app-booking-confirmation',
-  imports: [CurrencyPipe, DatePipe, RouterLink, ProofUploadComponent],
+  imports: [CurrencyPipe, DatePipe, RouterLink, ProofUploadComponent, IconComponent],
   templateUrl: './booking-confirmation.component.html',
   styleUrl: './booking-confirmation.component.scss'
 })
@@ -45,9 +46,9 @@ export class BookingConfirmationComponent implements OnInit {
 
   paymentLabel(b: Booking): string {
     switch (b.paymentStatus) {
-      case 'VERIFIED': return 'received ✓';
-      case 'REJECTED': return 'not confirmed: please upload a new proof';
-      case 'SUBMITTED': return 'proof received, being checked';
+      case 'VERIFIED': return 'Down payment received';
+      case 'REJECTED': return 'Not confirmed: upload a new proof';
+      case 'SUBMITTED': return 'Proof received, being checked';
       default: return '';
     }
   }

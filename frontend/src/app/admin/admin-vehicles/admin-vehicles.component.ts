@@ -5,11 +5,12 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 
 import { Vehicle, VehicleStatus } from '../../models/vehicle';
 import { VehicleService } from '../../services/vehicle.service';
+import { IconComponent } from '../../shared/icon.component';
 import { problemMessage } from '../../shared/problem';
 
 @Component({
   selector: 'app-admin-vehicles',
-  imports: [ReactiveFormsModule, CurrencyPipe],
+  imports: [ReactiveFormsModule, CurrencyPipe, IconComponent],
   templateUrl: './admin-vehicles.component.html',
   styleUrl: './admin-vehicles.component.scss'
 })

@@ -9,6 +9,7 @@ import { Vehicle } from '../../models/vehicle';
 import { BookingService } from '../../services/booking.service';
 import { VehicleService } from '../../services/vehicle.service';
 import { rentalDays } from '../../shared/dates';
+import { IconComponent } from '../../shared/icon.component';
 import { googleMapsUrl } from '../../shared/maps';
 import { problemMessage } from '../../shared/problem';
 
@@ -27,7 +28,7 @@ const ACTIONS: Record<BookingStatus, StatusAction[]> = {
 
 @Component({
   selector: 'app-admin-bookings',
-  imports: [ReactiveFormsModule, CurrencyPipe, DatePipe],
+  imports: [ReactiveFormsModule, CurrencyPipe, DatePipe, IconComponent],
   templateUrl: './admin-bookings.component.html',
   styleUrl: './admin-bookings.component.scss',
   // Escape closes the proof dialog, wherever the keyboard focus is
@@ -58,6 +59,8 @@ export class AdminBookingsComponent implements OnInit, OnDestroy {
   });
 
   readonly pendingCount = computed(() => this.bookings().filter(b => b.status === 'PENDING').length);
+  /** Down payments uploaded but not yet verified or rejected */
+  readonly paymentsToCheck = computed(() => this.bookings().filter(b => b.paymentStatus === 'SUBMITTED').length);
 
   constructor() {
     // Reload the table whenever a filter changes
